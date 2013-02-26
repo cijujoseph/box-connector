@@ -35,7 +35,11 @@ import org.mule.api.annotations.lifecycle.Stop;
 import org.mule.api.annotations.param.Default;
 import org.mule.api.annotations.param.Optional;
 import org.mule.api.context.MuleContextAware;
+import org.mule.commons.jersey.JerseyUtil;
 import org.mule.construct.Flow;
+import org.mule.modules.box.jersey.AuthBuilderBehaviour;
+import org.mule.modules.box.jersey.BoxResponseHandler;
+import org.mule.modules.box.jersey.MediaTypesBuilderBehaviour;
 import org.mule.modules.box.model.Folder;
 import org.mule.modules.box.model.FolderItems;
 import org.mule.modules.box.model.SharedLink;
@@ -43,6 +47,7 @@ import org.mule.modules.box.model.descriptor.FolderItem;
 import org.mule.modules.box.model.request.CopyFolderRequest;
 import org.mule.modules.box.model.request.CreateFolderRequest;
 import org.mule.modules.box.model.request.CreateSharedLinkRequest;
+import org.mule.modules.box.model.request.UpdateFolderRequest;
 import org.mule.modules.box.model.response.GetAuthTokenResponse;
 import org.mule.modules.box.model.response.GetTicketResponse;
 import org.mule.modules.box.model.response.UploadFileResponse;
@@ -50,6 +55,7 @@ import org.mule.modules.boxnet.callback.AuthCallbackAdapter;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.WebResource.Builder;
 import com.sun.jersey.api.client.config.ClientConfig;
 import com.sun.jersey.api.client.config.DefaultClientConfig;
 import com.sun.jersey.api.json.JSONConfiguration;
@@ -73,20 +79,30 @@ public class BoxConnector implements MuleContextAware {
 	
 	private static final String BOX_AUTH_TICKET = "boxAuthTicket";
 	private static final String BOX_AUTH_TOKEN = "boxAuthToken";
-	private static final String BASE_URL = "https://api.box.com/2.0/";
-	
-	/**
-	 * The url where the user needs to enter his credentials
-	 */
-	private static final String AUTH_URL = "https://www.box.com/api/1.0/rest"; 
-	
 	
 	private Client client;
 	
 	private MuleContext muleContext;
 	private AuthCallbackAdapter authCallback;
 	
-    /**
+    
+	/**
+	 * The api's base url
+	 */
+	@Configurable
+	@Optional
+	@Default("https://api.box.com/2.0/")
+	private String baseUrl;
+	
+	/**
+	 * The url where the user needs to enter his credentials
+	 */
+	@Configurable
+	@Optional
+	@Default("https://www.box.com/api/1.0/rest")
+	private String authUrl;
+	
+	/**
      * The API key obtained when registering a project with the Box platform.
      * For more information about this field please refer to {@link http://developers.box.net/}
      */
@@ -241,6 +257,12 @@ public class BoxConnector implements MuleContextAware {
     
     private String authToken;
     
+    private JerseyUtil jerseyUtil;
+    
+    private WebResource apiResource;
+    
+    private WebResource authResource;
+    
     /**
      * This method initiaes the box client and the auth callback.
      * Also, it fetches the save/restore flows (if specified). If those are specified
@@ -272,6 +294,19 @@ public class BoxConnector implements MuleContextAware {
 		
 		this.restoreTokenFlow = this.fetchFlow(this.restoreAuthTokenFlow);
 		this.saveTokenFlow = this.fetchFlow(this.saveAuthTokenFlow);
+		
+		this.initJerseyUtil();
+		
+		this.apiResource = this.client.resource(this.baseUrl);
+		this.authResource = this.client.resource(this.authUrl);
+    }
+    
+    private void initJerseyUtil() {
+    	this.jerseyUtil = JerseyUtil.builder()
+    						.addRequestBehaviour(MediaTypesBuilderBehaviour.INSTANCE)
+    						.addRequestBehaviour(new AuthBuilderBehaviour(this))
+    						.setResponseHandler(BoxResponseHandler.INSTANCE)
+    						.build();
     }
     
     @Stop
@@ -304,12 +339,11 @@ public class BoxConnector implements MuleContextAware {
     @Inject
     public String getTicket(MuleMessage message, @Optional @Default("true") Boolean redirect) {
     	
-    	GetTicketResponse response = JerseyUtils.get(
-    										this.client.resource(AUTH_URL)
-								    			.queryParam("action", "get_ticket")
-								    			.queryParam("api_key", this.apiKey)
-									    		.accept(MediaType.APPLICATION_XML),
-								    		GetTicketResponse.class); 
+    	GetTicketResponse response = this.authResource
+						    			.queryParam("action", "get_ticket")
+						    			.queryParam("api_key", this.apiKey)
+							    		.accept(MediaType.APPLICATION_XML)
+							    		.get(GetTicketResponse.class);
     	if (response.isValid()) {
     		
     		String ticket = response.getTicket();
@@ -382,13 +416,12 @@ public class BoxConnector implements MuleContextAware {
     public GetAuthTokenResponse authToken(MuleMessage message, String ticket) {
     	
 
-    	GetAuthTokenResponse response = JerseyUtils.get(
-    									this.client.resource(AUTH_URL)
+    	GetAuthTokenResponse response = this.authResource
 							    			.queryParam("action", "get_auth_token")
 							    			.queryParam("api_key", this.apiKey)
 							    			.queryParam("ticket", ticket)
-								    		.accept(MediaType.APPLICATION_XML),
-							    		GetAuthTokenResponse.class); 
+								    		.accept(MediaType.APPLICATION_XML)
+								    		.get(GetAuthTokenResponse.class); 
     	
     	if (response.isNotLoggedIn()) {
     		String msg = "Failed to obtain authToken using ticket " + ticket + ". Not logged in";
@@ -424,11 +457,7 @@ public class BoxConnector implements MuleContextAware {
     @Processor
     @Inject
     public Folder getFolder(MuleMessage message, @Optional @Default("0") String folderId) {
-    	return JerseyUtils.secureGet(
-    				this.client.resource(BASE_URL + "folders")
-	    				.path(folderId)
-	    				.accept(MediaType.APPLICATION_JSON),
-    				Folder.class, apiKey, this.getAuthToken(message));
+    	return this.jerseyUtil.get(this.apiResource.path("folders").path(folderId), Folder.class, 200);
     }
     
     /**
@@ -444,12 +473,31 @@ public class BoxConnector implements MuleContextAware {
     @Processor
     @Inject
     public Folder createFolder(MuleMessage message, @Optional @Default("0") String parentId, String folderName) {
-    	return JerseyUtils.securePost(
-    							this.client.resource(BASE_URL + "folders")
-	    							.accept(MediaType.APPLICATION_JSON)
-	    							.type(MediaType.APPLICATION_JSON)
-	    							.entity(new CreateFolderRequest(folderName, parentId)),
-	    						Folder.class, this.apiKey, this.getAuthToken(message));
+    	return this.jerseyUtil.post(this.apiResource.path("folders")
+    							.entity(new CreateFolderRequest(folderName, parentId)),
+	    						Folder.class,
+	    						200, 201);
+    }
+    
+    
+    /**
+     * Used to update information about the folder. To move a folder, update the ID of its parent.
+     * To enable an email address that can be used to upload files to this folder, update the folderUploadEmail attribute.
+     * An optional If-Match header can be included to ensure that client only updates the folder if it knows about the latest version by setting the etag attribute.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:update-folder}
+     * 
+     * @param message the current mule message
+     * @param request an instance of {@link org.mule.modules.box.model.request.UpdateFolderRequest} with the attributes you want to change
+     * @param folderId the id of the folder to be modified
+     * @param etag if provided, it will be used to verify that no newer version of the file is available at box
+     * @return an instance of {@link org.mule.modules.box.model.Folder} that represents the updated folder
+     */
+    @Processor
+    @Inject
+    public Folder updateFolder(MuleMessage message, @Optional @Default("#[payload]") UpdateFolderRequest request, String folderId, @Optional String etag) {
+    	WebResource resource = this.apiResource.path("folders").path(folderId);
+    	return this.jerseyUtil.put(this.maybeAddIfMacth(resource, etag), Folder.class, 200, 201);
     }
     
     /**
@@ -468,13 +516,11 @@ public class BoxConnector implements MuleContextAware {
     	CreateSharedLinkRequest request = new CreateSharedLinkRequest();
     	request.setSharedLink(sharedLink);
     	
-    	return JerseyUtils.securePut(
-    							this.client.resource(BASE_URL + "folders")
+    	return this.jerseyUtil.put(this.apiResource.path("folders")
     								.path(folderId)
-	    							.accept(MediaType.APPLICATION_JSON)
-	    							.type(MediaType.APPLICATION_JSON)
 	    							.entity(request),
-	    						Folder.class, this.apiKey, this.getAuthToken(message));
+	    						Folder.class,
+	    						200, 201);
     }
     
     /**
@@ -505,14 +551,12 @@ public class BoxConnector implements MuleContextAware {
     @Processor
     @Inject
     public Folder copyFolder(MuleMessage message, @Optional @Default("0") String parentId, String folderId) {
-    	return JerseyUtils.securePost(
-    							this.client.resource(BASE_URL + "folders")
+    	return this.jerseyUtil.post(this.apiResource.path("folders")
     								.path(folderId)
     								.path("copy")
-	    							.accept(MediaType.APPLICATION_JSON)
-	    							.type(MediaType.APPLICATION_JSON)
 	    							.entity(new CopyFolderRequest(parentId)),
-	    						Folder.class, this.apiKey, this.getAuthToken(message));
+	    						Folder.class,
+	    						200, 201);
     }
     
     
@@ -538,7 +582,7 @@ public class BoxConnector implements MuleContextAware {
     					@Optional String limit,
     					@Optional String offset,
     					@Optional String fields) {
-    	WebResource resource = this.client.resource(BASE_URL)
+    	WebResource resource = this.apiResource
 						    			.path("folders")
 						    			.path(folderId)
 						    			.path("items");
@@ -555,7 +599,7 @@ public class BoxConnector implements MuleContextAware {
     		resource = resource.queryParam("fields", fields);
     	}
     	
-    	return JerseyUtils.secureGet(resource.accept(MediaType.APPLICATION_JSON) , FolderItems.class, this.apiKey, this.getAuthToken(message));
+    	return this.jerseyUtil.get(resource, FolderItems.class, 200);
     }
     
     /**
@@ -594,13 +638,12 @@ public class BoxConnector implements MuleContextAware {
     @Processor
     @Inject
     public void deleteFolder(MuleMessage message, String folderId, @Optional @Default("true") Boolean recursive) {
-    	JerseyUtils.secureDelete(
-    			this.client.resource(BASE_URL)
+    	this.jerseyUtil.delete(
+    			this.apiResource
     				.path("folders")
     				.path(folderId)
     				.queryParam("recursive", recursive.toString())
-    				.accept(MediaType.APPLICATION_JSON)
-    			, String.class, this.apiKey, this.getAuthToken(message));
+    			, String.class, 200, 204);
     			
     	
     }
@@ -633,7 +676,7 @@ public class BoxConnector implements MuleContextAware {
     		@Optional String contentCreatedAt,
     		@Optional String contentModifiedAt) {
     	
-    	WebResource.Builder resource = this.client.resource(BASE_URL + "files/content").type(MediaType.MULTIPART_FORM_DATA);
+    	WebResource.Builder resource = this.apiResource.path("files").path("content").type(MediaType.MULTIPART_FORM_DATA);
     	
     	if (includeHash) {
 			resource.header("Content-MD5", this.hash(content));
@@ -654,7 +697,7 @@ public class BoxConnector implements MuleContextAware {
 		
     	resource.entity(form);
     	
-    	return JerseyUtils.securePost(resource, UploadFileResponse.class, this.apiKey, this.getAuthToken(message));
+    	return this.jerseyUtil.post(resource, UploadFileResponse.class, 200, 201);
     }
     
     private String hash(InputStream content) {
@@ -739,525 +782,11 @@ public class BoxConnector implements MuleContextAware {
     @Processor
     @Inject
     public void deleteFile(MuleMessage message, String fileId, @Optional String etag) {
-    	WebResource.Builder resource = this.client.resource(BASE_URL + "files").path(fileId).accept(MediaType.APPLICATION_JSON);
-    	
-    	if (!StringUtils.isBlank(etag)) {
-    		resource.header("If-Match", etag);
-    	}
-    	
-    	JerseyUtils.secureDelete(resource, String.class, this.apiKey, this.getAuthToken(message));
+    	WebResource resource = this.apiResource.path("files").path(fileId);
+    	this.jerseyUtil.delete(this.maybeAddIfMacth(resource, etag), String.class, 200, 204);
     }
     
 
-    /**
-     * Create a new user in box.net
-     *
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:register-new-user}
-     *
-     * @param email the user's email
-     * @param password the user's password
-     * @return an instance of {@link cn.com.believer.songyuanframework.openapi.storage.box.functions.RegisterNewUserResponse} with
-     * 			data about the operation status and info about the newly created user (if successful)
-     */
-//    @Processor
-//    public RegisterNewUserResponse registerNewUser(String email, String password) {
-//    	if (logger.isDebugEnabled()) {
-//    		logger.debug("about to create user with email: " + email + " and pass: " + password);
-//    	}
-//    	
-//    	final RegisterNewUserRequest registerNewUserRequest = BoxRequestFactory.createRegisterNewUserRequest(apiKey, email, password);
-//    	return this.execute(new BoxClosure<RegisterNewUserResponse>() {
-//    		
-//    		@Override
-//    		public RegisterNewUserResponse execute() throws IOException, BoxException {
-//    			return client.registerNewUser(registerNewUserRequest);
-//    		}
-//		}, "registerNewUser");
-//    }
-    
-    
-    /**
-     * Makes a public share of a file or folder
-     *
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:public-share}
-     *
-     * @param muleMessage the current mule message
-     * @param target The type of item to be shared.  This can be set as 'file' or 'folder'. Any other value will throw a {@link IllegalArgumentException}
-     * @param targetId The id of the item you wish to share.  If the target is a folder, this will be the folder_id.  If the target is a file, this will be the file_id.
-     * @param password The password to protect the folder or file.
-     * @param message An message to be included in a notification email.
-     * @return an instance of {@link cn.com.believer.songyuanframework.openapi.storage.box.functions.PublicShareResponse} with
-     * 			data about the operation status and info about the shared folder (if successful)
-     * @throws {@link IllegalArgumentException} if target is invalid
-     */
-//    @Processor
-//    @Inject
-//    public PublicShareResponse publicShare(
-//									MuleMessage muleMessage,
-//    								Target target,
-//									String targetId,
-//									String password,
-//									String message) {
-//    	
-//    	String authToken = this.getAuthToken(muleMessage);
-//    	
-//    	if (logger.isDebugEnabled()) {
-//    		logger.debug("about to share folder with params:" +
-//    					"\ntarget: " + target +
-//    					"\ntargetId: " + targetId + 
-//    					"\npassword: " + password + 
-//    					"\nmessage: " + message);
-//    	}
-//    	
-//    	final PublicShareRequest publicShareRequest = BoxRequestFactory.createPublicShareRequest(
-//    			apiKey,	authToken, target.name(), targetId, password, message, null);
-//    	
-//    	return this.execute(new BoxClosure<PublicShareResponse>() {
-//    		
-//    		@Override
-//    		public PublicShareResponse execute() throws IOException, BoxException {
-//    			return client.publicShare(publicShareRequest);
-//    		}
-//		}, "publicShare");
-//    }
-    
-    /**
-     * This processor unshares a public shared file or folder
-     * 
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:public-unshare}
-     * 
-     * @param message the current mule message
-     * @param target shoud be either 'file' or 'folder'
-     * @param targetId is id of a file or folder to be unshared
-     * @return  On a successful result, the status will be 'unshare_ok'. If the result wasn't successful, the status field can be: 'unshare_error', 'wrong_node', 'not_logged_in', 'application_restricted'.
-     * @throws {@link IllegalArgumentException} if target is invalid
-     */
-//    @Processor
-//    @Inject
-//    public String publicUnshare(MuleMessage message, Target target, String targetId) {
-//    	String authToken = this.getAuthToken(message);
-//    	final PublicUnshareRequest request = BoxRequestFactory.createPublicUnshareRequest(apiKey, authToken, target.name(), targetId);
-//    	
-//    	PublicUnshareResponse response = this.execute(new BoxClosure<PublicUnshareResponse>() {
-//    		
-//    		@Override
-//    		public PublicUnshareResponse execute() throws IOException, BoxException {
-//    			return client.publicUnshare(request);
-//    		}
-//		}, "publicUnshare");
-//    	
-//    	return response.getStatus();
-//    }
-    
-    /**
-     * This processor privately shares a file or folder with another user(s).
-     * 'target' param, 'target_id' is . 'emails' params is an array of emails
-     * of users' to share files with. if 'notify' param is , 'message' param .
-     * 
-     * Note: currently only files can be shared privately.
-     * 
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:private-share}
-     * 
-     * @param muleMessage the current mule message
-     * @param target should be either 'file' or 'folder'
-     * @param targetId the id of the file or folder to be shared
-     * @param csvMails comma separated list of email addresses of the users that will receive the share
-     * @param notify if true, then a notification email will be sent to users. Optional parameter, defaults to true
-     * @param message is a message to be included in the notification email. Optional parameter, defaults to an empty string
-     * @return if successful will be 'private_share_ok'. Otherwise can be: 'private_share_error', 'wrong_node', 'not_logged_in', 'application_restricted'.
-     * @throws {@link IllegalArgumentException} if target is invalid or csvMails is null or empty
-     */
-//    @Processor
-//    @Inject
-//    public String privateShare( MuleMessage muleMessage,
-//    							Target target,
-//    							String targetId,
-//    							String csvMails,
-//    							@Optional @Default("true") Boolean notify,
-//    							@Optional @Default("") String message )	{
-//    	
-//    	String authToken = this.getAuthToken(muleMessage);
-//    	
-//    	if (StringUtils.isEmpty(csvMails)) {
-//    		throw new IllegalArgumentException("csvMails cannot be empty");
-//    	}
-//    	
-//    	final PrivateShareRequest request = BoxRequestFactory.createPrivateShareRequest(
-//    					apiKey, authToken, target.name(), targetId, csvMails.split(","), message, notify);
-//    	
-//    	PrivateShareResponse response = this.execute(new BoxClosure<PrivateShareResponse>() {
-//    		
-//    		@Override
-//    		public PrivateShareResponse execute() throws IOException, BoxException {
-//    			return client.privateShare(request);
-//    		}
-//		}, "privateShare");
-//    	
-//    	return response.getStatus();
-//    }
-    
-    /**
-     * This processor is used to get a user's files and folders tree.
-     * 
-     * 'folderId' param defines root folder from which the tree begins.
-     * 'csvParams' is comma separated list where you can set additional parameters,
-     * which are: onelevel - make a tree of one level depth, so you will get
-     * only files and folders stored in folder which folder_id you have
-     * provided. nofiles - include folders only in result tree, no files. nozip
-     * - do not zip tree xml.
-     * 
-     * On successful result you will receive 'listing_ok' as status and the tree xml.
-     * if you haven't set 'nozip' as a parameter (it's set by default), then you have to unzip it. Then you will get xml like
-     * this: (note that updatedand createdare UNIX timestamps in PST).
-     *
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-tree-structure}
-     *
-     * @param message the current mule message
-     * @param folderId The ID of the root folder from which the tree begins.  If this value is "0", the user's full account tree is returned. Defaults to zero
-     * @param csvParams comma separated list of params. This is optional and defaults to 'nozip'
-     * @param encoding optional parameter to specify the encoding to use when decoding BASE64. Defaults to UTF-8
-     * @return an instance of {@link cn.com.believer.songyuanframework.openapi.storage.box.functions.GetAccountTreeResponse} with
-     * 			data about the operation status and info about the inspected folder (if successful)
-     */
-//    @Processor
-//    @Inject
-//    public GetAccountTreeResponse getTreeStructure(
-//    		MuleMessage message,
-//    		@Optional @Default("0") String folderId,
-//			@Optional @Default("nozip") String csvParams,
-//			final @Optional @Default("UTF-8") String encoding) {
-//    	
-//    	String authToken = this.getAuthToken(message);
-//    	if (logger.isDebugEnabled()) {
-//    		logger.debug("fetching tree structure with params:\n" +
-//    					"\nfolderId: " + folderId + 
-//    					"\ncsvParams: " + csvParams);
-//    	}
-//    	
-//    	String[] params = StringUtils.isEmpty(csvParams) ? null : csvParams.split(",");
-//    	final GetAccountTreeRequest getAccountTreeRequest = BoxRequestFactory.createGetAccountTreeRequest(
-//    			apiKey, authToken, folderId, params);
-//    	
-//    	return this.execute(new BoxClosure<GetAccountTreeResponse>() {
-//    		
-//    		@Override
-//    		public GetAccountTreeResponse execute() throws IOException,	BoxException {
-//    			GetAccountTreeResponse response = client.getAccountTree(getAccountTreeRequest);
-//    			
-//    			if (response.getEncodedTree() != null) {
-//    				response.setEncodedTree(decode(response.getEncodedTree(), encoding));
-//    			}
-//    			
-//    			return response;
-//    		}
-//		}, "getTreeStructure");
-//    }
-    
-    
-    /**
-     * Downloads a file an returns its contents as a byte[] 
-     *
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:download}
-     *
-     * @param message the current mule message
-     * @param fileId the id of the file we want to download
-     * @return the file's contents as a byte array
-     */
-//    @Processor
-//    @Inject
-//    public byte[] download(MuleMessage message, String fileId) {
-//    	
-//    	String authToken = this.getAuthToken(message);
-//    	if (logger.isDebugEnabled()) {
-//    		logger.debug("About to download file with id: " + fileId);
-//    	}
-//    	
-//    	final DownloadRequest downloadRequest = BoxRequestFactory.createDownloadRequest(authToken, fileId, false, null);
-//    	DownloadResponse response = this.execute(new BoxClosure<DownloadResponse>() {
-//    		
-//    		@Override
-//    		public DownloadResponse execute() throws IOException, BoxException {
-//    			return client.download(downloadRequest);
-//    		}
-//    		
-//		}, "download");
-//    	
-//    	return response.getRawData();
-//    }
-    
-    
-    /**
-     * Logs out the user associated with the authorization token
-     *
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:logout}
-     *
-     * @param message the current mule message
-     * @return an instance of {@link cn.com.believer.songyuanframework.openapi.storage.box.functions.LogoutResponse} with data about the operation status
-     */
-//    @Processor
-//    @Inject
-//    public LogoutResponse logout(MuleMessage message) {
-//    	String authToken = this.getAuthToken(message);  	
-//    	if (logger.isDebugEnabled()) {
-//    		logger.debug("logging off authToken: " + authToken);
-//    	}
-//    	
-//    	final LogoutRequest logoutRequest = BoxRequestFactory.createLogoutRequest(apiKey, authToken);
-//    	
-//    	return this.execute(new BoxClosure<LogoutResponse>() {
-//    		
-//    		@Override
-//    		public LogoutResponse execute() throws IOException, BoxException {
-//    			return client.logout(logoutRequest);
-//    		}
-//		}, "logout");
-//    }
-    
-    /**
-    * This method is used to verify user registration email
-    * 
-    * {@sample.xml ../../../doc/box-connector.xml.sample box:verify-registration-email}
-    * 
-    * @param message the current mule message
-    * @param loginName The login username of the user for which you would like to verify registration.
-    * @return Upon a successful registration, the return value will be 'email_ok'.
-	*		If registration was not successful, it can be:
-	*		'email_invalid' - The login provided is not a valid email address.
-	*		'email_already_registered' - The login provided is already registered by another user.
-	*		'application_restricted'- You provided an invalid api_key, or the api_key is restricted from calling this function. 
-    */ 
-//    @Processor
-//    @Inject
-//    public String verifyRegistrationEmail(MuleMessage message, String loginName) {
-//
-//        if (logger.isDebugEnabled()) {
-//        	logger.debug("checking registration email for loginName: " + loginName);
-//        }
-//        
-//        final VerifyRegistrationEmailRequest request = BoxRequestFactory.createVerifyRegistrationEmailRequest();
-//        request.setLoginName(loginName);
-//        request.setApiKey(apiKey);
-//        
-//        return this.execute(new BoxClosure<VerifyRegistrationEmailResponse>() {
-//        	
-//        	@Override
-//        	public VerifyRegistrationEmailResponse execute() throws IOException, BoxException {
-//        		return client.verifyRegistrationEmail(request);
-//        	}
-//		}, "verifyRegistrationEmail").getStatus();
-//    }
-    
-    /**
-     * This processor returns all the user's tags.
-     * 
-     * On successful you will get an xml representing the tags that looks like this:
-     * 
-     * <?xml version="1.0"?> <tags> <tag id="37"> music </tag> <tag id="38"> mp3
-     * </tag> </tags> If the result wasn't successful, status field can be:
-     * not_logged_id, application_restricted.
-     * 
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:export-tags}
-     * 
-     * @param message the current mule message
-     * @param encoding encoding to use when decoding from BASE64. Optional, defaults to UTF-8
-     * @return a String xml representing the tags
-     */
-//    @Processor
-//    @Inject
-//    public String exportTags(MuleMessage message, @Optional @Default("UTF-8") String encoding) {
-//    	String authToken = this.getAuthToken(message);
-//    	final ExportTagsRequest request = BoxRequestFactory.createExportTagsRequest(apiKey, authToken);
-//    	
-//    	if (logger.isDebugEnabled()) {
-//    		logger.debug("getting tags");
-//    	}
-//    	
-//    	ExportTagsResponse response = this.execute(new BoxClosure<ExportTagsResponse>() {
-//    		
-//    		@Override
-//    		public ExportTagsResponse execute() throws IOException, BoxException {
-//    			 return client.exportTags(request);
-//    			
-//    		}
-//    		
-//		}, "exportTags");
-//    	
-//    	if (response.getStatus().equals("export_tags_ok")) {
-//    		return this.decode(response.getEncodedTags(), encoding);
-//    	}
-//    	
-//    	throw new RuntimeException("Error retrieving tags. Box.net replied " + response.getStatus());
-//    }
-    
-    /**
-     * This processor moves a file or folder to another folder.
-     * 
-     * 
-     * On a successful result, status will be 's_move_node'. If the result
-     * wasn't successful, status field can be: 'e_move_node', 'not_logged_in',
-     * 'application_restricted'.
-     * 
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:move}
-     * 
-     * @param message the current mule message
-     * @param target can be either 'file' or 'folder' depending on what do you
-     * @param targetId is the id of a file or folder to be moved
-     * @param destinationId is the destination folder id.
-     * @return if successful 's_move_node'. Otherwise it can be 'e_move_node', 'not_logged_in',
-     * 'application_restricted'.
-     */
-//    @Processor
-//    @Inject
-//    public String move(MuleMessage message, Target target, String targetId, String destinationId) {
-//    	String authToken = this.getAuthToken(message);
-//    	
-//    	if (logger.isDebugEnabled()) {
-//    		logger.debug("moving " + target + " " + targetId + " to " + destinationId);
-//    	}
-//    	
-//    	final MoveRequest request = BoxRequestFactory.createMoveRequest(apiKey, authToken, target.name(), targetId, destinationId);
-//    	
-//    	MoveResponse response = this.execute(new BoxClosure<MoveResponse>() {
-//    		
-//    		@Override
-//    		public MoveResponse execute() throws IOException, BoxException {
-//    			return client.move(request);
-//    		}
-//		}, "move");
-//    	
-//    	return response.getStatus();
-//    }
-    
-    /**
-     * This processor renames a file or folder.
-     * 
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:move} 
-     * 
-     * @param message the current mule message
-     * @param target can be either 'file' or 'folder' depending on what you want to rename
-     * @param targetId is the id of a file or folder to be renamed
-     * @param newName is the new name for a file or folder
-     * @return if successful will be 's_rename_node'. Otherwise it can be: 'e_rename_node', 'not_logged_in', 'application_restricted'
-     */
-//    @Processor
-//    @Inject
-//    public String rename(MuleMessage message, Target target, String targetId, String newName) {
-//    	String authToken = this.getAuthToken(message);
-//    	
-//    	if (logger.isDebugEnabled()) {
-//    		logger.debug("renaming " + target + " " + targetId + " to " + newName);
-//    	}
-//    	
-//    	final RenameRequest request = BoxRequestFactory.createRenameRequest(apiKey, authToken, target.name(), targetId, newName);
-//    	
-//    	RenameResponse response = this.execute(new BoxClosure<RenameResponse>() {
-//    		
-//    		@Override
-//    		public RenameResponse execute() throws IOException, BoxException {
-//    			return client.rename(request);
-//    		}
-//		}, "rename");
-//    	
-//    	return response.getStatus();
-//    }
-    
-    /**
-     * Gets information about a file
-     * 
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-file-info}
-     * 
-     * @param message the current mule message
-     * @param fileId the id of the file you want info about
-     * @return an instance of {@link cn.com.believer.songyuanframework.openapi.storage.box.functions.GetFileInfoResponse}
-     */
-//    @Processor
-//    @Inject
-//    public GetFileInfoResponse getFileInfo(MuleMessage message, String fileId) {
-//    	String authToken = this.getAuthToken(message);
-//    	if (logger.isDebugEnabled()) {
-//    		logger.debug("getting information about file: " + fileId);
-//    	}
-//    	
-//    	final GetFileInfoRequest request = BoxRequestFactory.createGetFileInfoRequest(apiKey, authToken, fileId);
-//    	return this.execute(new BoxClosure<GetFileInfoResponse>() {
-//    		
-//    		@Override
-//    		public GetFileInfoResponse execute() throws IOException, BoxException {
-//    			return client.getFileInfo(request);
-//    		}
-//		}, "getFileInfo");
-//    }
-//    
-    /**
-     * This processor adds file or folder to tags list. 
-     * 
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:add-to-tag}
-     * 
-     * @param message the current mule message
-     * @param csvTags comma separated list of tags
-     * @param target can be either 'file' or 'folder' depending on what do you want to add
-     * @param targetId the id of a file or folder to be added
-     * @return 'addtotag_ok' if successful. Otherwise addtotag_error.
-     * @throws {@link IllegalArgumentException} if target is invalid or csvTags is empty
-     */
-//    @Processor
-//    @Inject
-//    public String addToTag(MuleMessage message, String csvTags, Target target, String targetId) {
-//    	String authToken = this.getAuthToken(message);
-//    	
-//    	if (StringUtils.isEmpty(csvTags)) {
-//    		throw new IllegalArgumentException("csvTags cannot be empty");
-//    	}
-//    	
-//    	if (logger.isDebugEnabled()) {
-//    		logger.debug("adding tags to " + target + " " + targetId + ": " + csvTags);
-//    	}
-//    	
-//    	final AddToTagRequest request = BoxRequestFactory.createAddToTagRequest(apiKey, authToken, csvTags.split(","), target.name(), targetId);
-//    	AddToTagResponse response = this.execute(new BoxClosure<AddToTagResponse>() {
-//    		
-//    		@Override
-//    		public AddToTagResponse execute() throws IOException, BoxException {
-//    			return client.addToTag(request);
-//    		}
-//		}, "addToTag");
-//    	
-//    	return response.getStatus();
-//    }
-    
-    /**
-     * 
-     * This processor sets a description to a file or folder.
-     * 
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:set-description}
-     * 
-     * @param message the current mule message
-     * @param target can be either 'file' or 'folder'
-     * @param targetId the id of the folder/file you want to modify
-     * @param description the description you want to set
-     * @return 's_set_description' if successful. 'e_set_description' otherwise.
-     */
-//    @Processor
-//    @Inject
-//    public String setDescription(MuleMessage message, Target target, String targetId, String description) {
-//    	String authToken = this.getAuthToken(message);
-//    	
-//    	if (logger.isDebugEnabled()) {
-//    		logger.debug("setting description of " + target + " " + targetId + " to:" + description);
-//    	}
-//    	
-//    	final SetDescriptionRequest request = BoxRequestFactory.createSetDescriptionRequest(apiKey, authToken, target.name(), targetId, description);
-//    	SetDescriptionResponse response = this.execute(new BoxClosure<SetDescriptionResponse>() {
-//    		
-//    		@Override
-//    		public SetDescriptionResponse execute() throws IOException, BoxException {
-//    			return client.setDescription(request);
-//    		}
-//		}, "setDescription");
-//    	
-//    	return response.getStatus();
-//    }
-    
     public String getAuthToken(MuleMessage message) {
     	String token = null;
     	
@@ -1287,6 +816,16 @@ public class BoxConnector implements MuleContextAware {
     	}
     	
     	return token;
+    }
+    
+    private WebResource.Builder maybeAddIfMacth(WebResource resource, String etag) {
+    	Builder builder = resource.getRequestBuilder();
+    	
+    	if (!StringUtils.isBlank(etag)) {
+    		builder = builder.header("If-Match", etag);
+    	}
+    	
+    	return builder;
     }
     
     private Flow fetchFlow(String flowname) {
@@ -1409,5 +948,20 @@ public class BoxConnector implements MuleContextAware {
 	public void setPostAuthFlow(String postAuthFlow) {
 		this.postAuthFlow = postAuthFlow;
 	}
-	
+
+	public String getBaseUrl() {
+		return baseUrl;
+	}
+
+	public void setBaseUrl(String baseUrl) {
+		this.baseUrl = baseUrl;
+	}
+
+	public String getAuthUrl() {
+		return authUrl;
+	}
+
+	public void setAuthUrl(String authUrl) {
+		this.authUrl = authUrl;
+	}
 }

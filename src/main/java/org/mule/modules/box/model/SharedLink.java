@@ -24,12 +24,6 @@ public class SharedLink implements Serializable {
 
 	private static final long serialVersionUID = -7687170653187915720L;
 	
-	public static enum Access {
-		open,
-		company,
-		collaborators
-	}
-	
 	private Access access;
 	private boolean passwordEnabled;
 	private String url;
