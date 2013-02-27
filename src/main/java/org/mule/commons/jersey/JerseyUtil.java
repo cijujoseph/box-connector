@@ -104,7 +104,7 @@ public class JerseyUtil {
 		int status = response.getStatus();
 		 
 		if (this.contains(expectedStatus, status)) {
-			return status != Status.NO_CONTENT.getStatusCode() ? this.responseHandler.onSuccess(response, entityClass) : null; 
+			return status != Status.NO_CONTENT.getStatusCode() ? this.responseHandler.onSuccess(response, entityClass) : this.responseHandler.<T>onNoContent(response); 
 		 } else {
 			 return this.responseHandler.onFailure(response, status, expectedStatus);
 		 }

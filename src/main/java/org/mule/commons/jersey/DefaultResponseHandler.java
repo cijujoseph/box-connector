@@ -26,4 +26,9 @@ public class DefaultResponseHandler implements ResponseHandler {
 	public <T> T onFailure(ClientResponse response, int status, int[] expectedStatus) {
 		throw new RuntimeException(String.format("Got status %d but was expecting one of [%s]", status, expectedStatus.toString()));
 	}
+	
+	@Override
+	public <T> T onNoContent(ClientResponse response) {
+		return null;
+	}
 }

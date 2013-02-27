@@ -21,4 +21,6 @@ public interface ResponseHandler {
 	
 	public <T> T onFailure(ClientResponse response, int status, int[] expectedStatus);
 	
+	public <T> T onNoContent(ClientResponse response);
+	
 }
