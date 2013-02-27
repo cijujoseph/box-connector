@@ -46,7 +46,7 @@ import org.mule.modules.box.model.Folder;
 import org.mule.modules.box.model.FolderItems;
 import org.mule.modules.box.model.SharedLink;
 import org.mule.modules.box.model.descriptor.FolderItem;
-import org.mule.modules.box.model.request.CopyFolderRequest;
+import org.mule.modules.box.model.request.CopyItemRequest;
 import org.mule.modules.box.model.request.CreateFolderRequest;
 import org.mule.modules.box.model.request.CreateSharedLinkRequest;
 import org.mule.modules.box.model.request.RestoreTrashedFolderRequest;
@@ -622,16 +622,21 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:share-folder}
      * 
-     * @param parentId the id of the parent folder that will hold the copy. If not provided then the root will be used
+     * @param targetFolderId the id of the parent folder that will hold the copy. If not provided then the root will be used
      * @param folderId the if od the folder being copied
      * @return an instance of {@link org.mule.modules.box.model.Folder} representing the copy
      */
     @Processor
-    public Folder copyFolder(@Optional @Default("0") String parentId, String folderId) {
+    public Folder copyFolder(@Optional @Default("0") String targetFolderId, String folderId) {
+    	FolderItem parent = new FolderItem();
+    	parent.setId(folderId);
+    	CopyItemRequest request = new CopyItemRequest();
+    	request.setParent(parent);
+    	
     	return this.jerseyUtil.post(this.apiResource.path("folders")
     								.path(folderId)
     								.path("copy")
-	    							.entity(new CopyFolderRequest(parentId)),
+	    							.entity(request),
 	    						Folder.class,
 	    						200, 201);
     }
@@ -903,7 +908,8 @@ public class BoxConnector implements MuleContextAware {
     }
     
     /**
-     * Deletes a file
+     * Discards a file to the trash. The etag of the file can be included as an ‘If-Match’ header to prevent race conditions.
+     * Depending on the enterprise settings for this user, the item will either be actually deleted from Box or moved to the trash.
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:delete-file}
      * 
@@ -933,6 +939,30 @@ public class BoxConnector implements MuleContextAware {
     public File updateFile(String fileId, @Optional @Default("#[payload]") UpdateItemRequest request, @Optional String etag) {
     	WebResource resource = this.apiResource.path("files").path(fileId);
     	return this.jerseyUtil.put(this.maybeAddIfMacth(resource, etag), File.class, 200, 201);
+    }
+    
+    /**
+     * Used to create a copy of a file in another folder. The original version of the file will not be altered.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:copy-file}
+     * 
+     * @param fileId the id of the file you want to copy
+     * @param targetFolderId the if of the target folder. Defaults to the root folder
+     * @return and instance of {@link org.mule.modules.box.model.File} representing the copy of the file
+     */
+    @Processor
+    public File copyFile(@Optional @Default("0") String targetFolderId, String fileId) {
+    	FolderItem parent = new FolderItem();
+    	parent.setId(fileId);
+    	CopyItemRequest request = new CopyItemRequest();
+    	request.setParent(parent);
+    	
+    	return this.jerseyUtil.post(this.apiResource.path("files")
+    								.path(fileId)
+    								.path("copy")
+	    							.entity(request),
+	    						File.class,
+	    						200, 201);
     }
     
 

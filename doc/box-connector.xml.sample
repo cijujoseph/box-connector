@@ -115,3 +115,6 @@
 <!-- BEGIN_INCLUDE(box:get-folder-item) -->
     <box:get-folder-item resourceName="invoices" />
 <!-- END_INCLUDE(box:get-folder-item) -->
+<!-- BEGIN_INCLUDE(box:copy-file) -->
+    <box:copy-file fileId="#[flowVars['fileId']]" />
+<!-- END_INCLUDE(box:copy-file) -->
