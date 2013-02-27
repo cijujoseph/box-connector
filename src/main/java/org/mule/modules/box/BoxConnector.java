@@ -558,6 +558,19 @@ public class BoxConnector implements MuleContextAware {
     }
     
     /**
+     * Retrieves a folder that has been moved to the trash.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-trashed-folder}
+     * 
+     * @param folderId the id of the folder you want
+     * @return an instance of {@link org.mule.modules.box.model.Folder}
+     */
+    @Processor
+    public Folder getTrashedFolder(String folderId) {
+    	return this.jerseyUtil.get(this.apiResource.path("folders").path(folderId).path("trash"), Folder.class, 200);
+    }
+    
+    /**
      * Used to create a shared link for this particular folder
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:share-folder}

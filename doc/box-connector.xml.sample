@@ -43,6 +43,9 @@
 <!-- BEGIN_INCLUDE(box:perm-delete-folder) -->
     <box:perm-delete-folder folderId="#[flowVars['folderID']]" />
 <!-- END_INCLUDE(box:perm-delete-folder) -->
+<!-- BEGIN_INCLUDE(box:get-trashed-folder) -->
+    <box:get-trashed-folder folderId="#[flowVars['folderID']]" />
+<!-- END_INCLUDE(box:get-trashed-folder) -->
 <!-- BEGIN_INCLUDE(box:restore-trashed-folder) -->
     <box:restore-trashed-folder folderId="#[flowVars['folderID']]" />
 <!-- END_INCLUDE(box:restore-trashed-folder) -->
