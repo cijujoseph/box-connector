@@ -84,6 +84,12 @@ public class BoxConnectorTest extends FunctionalTestCase {
 	}
 	
 	@Test
+	public void trashed() throws Exception {
+		FolderItems items = (FolderItems) this.callFlow("", "testTrashed").getPayload();
+		Assert.assertFalse(items.getEntries().isEmpty());
+	}
+	
+	@Test
 	public void upload() throws Exception {
 		InputStream in = this.getClass().getResourceAsStream("/test.txt");
 		assert in != null : "Could not load file";

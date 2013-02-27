@@ -40,6 +40,9 @@
 <!-- BEGIN_INCLUDE(box:delete-folder) -->
     <box:delete-folder folderId="#[flowVars['folderID']]" />
 <!-- END_INCLUDE(box:delete-folder) -->
+<!-- BEGIN_INCLUDE(box:restore-trashed-folder) -->
+    <box:restore-trashed-folder folderId="#[flowVars['folderID']]" />
+<!-- END_INCLUDE(box:restore-trashed-folder) -->
 <!-- BEGIN_INCLUDE(box:share-folder) -->
     <box:share-folder folderId="#[flowVars['folderID']]" />
 <!-- END_INCLUDE(box:share-folder) -->

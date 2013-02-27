@@ -15,6 +15,7 @@ import javax.xml.bind.annotation.XmlElement;
 import org.mule.modules.box.model.SharedLink;
 
 /**
+ * Request object for creating a shared link
  * 
  * @author mariano.gonzalez@mulesoft.com
  *
@@ -23,6 +24,10 @@ public class CreateSharedLinkRequest implements Serializable {
 
 	
 	private static final long serialVersionUID = -3575803012819146504L;
+	
+	/**
+	 * The shared link object
+	 */
 	@XmlElement(name="shared_link")
 	private SharedLink sharedLink;
 

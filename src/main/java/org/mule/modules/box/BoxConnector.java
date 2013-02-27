@@ -48,6 +48,7 @@ import org.mule.modules.box.model.descriptor.FolderItem;
 import org.mule.modules.box.model.request.CopyFolderRequest;
 import org.mule.modules.box.model.request.CreateFolderRequest;
 import org.mule.modules.box.model.request.CreateSharedLinkRequest;
+import org.mule.modules.box.model.request.RestoreTrashedFolderRequest;
 import org.mule.modules.box.model.request.UpdateFolderRequest;
 import org.mule.modules.box.model.response.GetAuthTokenResponse;
 import org.mule.modules.box.model.response.GetTicketResponse;
@@ -533,7 +534,26 @@ public class BoxConnector implements MuleContextAware {
     	return this.getFolderItems(message, "trash", limit, offset);
     }
     
-    
+    /**
+     * Restores an item that has been moved to the trash. Default behavior is to restore the item to the folder it was in before it was moved to the trash.
+     * If that parent folder no longer exists or if there is now an item with the same name in that parent folder,
+     * the new parent folder and/or new name will need to be included in the request.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:restore-trashed-folder}
+     * 
+     * @param message the current mule message
+     * @param folderId the id of the trashed folder being restored
+     * @param request an instance of {@link org.mule.modules.box.model.request.RestoreTrashedFolderRequest} with the request parameters
+     * @return an instance of {@link org.mule.modules.box.model.Folder} with the restored folder new state
+     */
+    public Folder restoreTrashedFolder(MuleMessage message, String folderId, @Optional @Default("#[payload]") RestoreTrashedFolderRequest request) {
+    	return this.jerseyUtil.post(this.apiResource
+	    								.path("folders")
+	    								.path(folderId)
+	    								.entity(request)
+    								, Folder.class
+    								, 201);
+    }
     
     /**
      * Used to create a shared link for this particular folder

@@ -65,4 +65,8 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
     	<box:get-folder-items />
     </flow>
     
+    <flow name="testTrashed">
+    	<box:get-trashed-items />
+    </flow>
+    
 </mule>
