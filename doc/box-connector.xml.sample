@@ -28,6 +28,9 @@
 <!-- BEGIN_INCLUDE(box:delete-file) -->
     <box:delete-file fileId="#[payload.id]" />
 <!-- END_INCLUDE(box:delete-file) -->
+<!-- BEGIN_INCLUDE(box:update-file) -->
+    <box:update-file fileId="#[payload.id]" />
+<!-- END_INCLUDE(box:update-file) -->
 <!-- BEGIN_INCLUDE(box:create-folder) -->
     <box:create-folder folderName="my new folder" />
 <!-- END_INCLUDE(box:create-folder) -->

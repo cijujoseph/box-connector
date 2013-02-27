@@ -50,7 +50,8 @@ import org.mule.modules.box.model.request.CopyFolderRequest;
 import org.mule.modules.box.model.request.CreateFolderRequest;
 import org.mule.modules.box.model.request.CreateSharedLinkRequest;
 import org.mule.modules.box.model.request.RestoreTrashedFolderRequest;
-import org.mule.modules.box.model.request.UpdateFolderRequest;
+import org.mule.modules.box.model.request.UpdateItemRequest;
+import org.mule.modules.box.model.response.FileVersionResponse;
 import org.mule.modules.box.model.response.GetAuthTokenResponse;
 import org.mule.modules.box.model.response.GetTicketResponse;
 import org.mule.modules.box.model.response.UploadFileResponse;
@@ -497,13 +498,13 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:update-folder}
      * 
-     * @param request an instance of {@link org.mule.modules.box.model.request.UpdateFolderRequest} with the attributes you want to change
+     * @param request an instance of {@link org.mule.modules.box.model.request.UpdateItemRequest} with the attributes you want to change
      * @param folderId the id of the folder to be modified
      * @param etag if provided, it will be used to verify that no newer version of the file is available at box
      * @return an instance of {@link org.mule.modules.box.model.Folder} that represents the updated folder
      */
     @Processor
-    public Folder updateFolder(@Optional @Default("#[payload]") UpdateFolderRequest request, String folderId, @Optional String etag) {
+    public Folder updateFolder(@Optional @Default("#[payload]") UpdateItemRequest request, String folderId, @Optional String etag) {
     	WebResource resource = this.apiResource.path("folders").path(folderId);
     	return this.jerseyUtil.put(this.maybeAddIfMacth(resource, etag), Folder.class, 200, 201);
     }
@@ -822,8 +823,6 @@ public class BoxConnector implements MuleContextAware {
     	return this.uploadNewVersionStream(this.readLocalFile(path), fileId, etag, filename, contentModifiedAt);
     }
     
-    
-    
     /**
      * Downloads a file
      * 
@@ -855,6 +854,20 @@ public class BoxConnector implements MuleContextAware {
     @Processor
     public File getFileMetadata(String fileId) {
     	return this.jerseyUtil.get(this.apiResource.path("files").path(fileId), File.class, 200);
+    }
+    
+    /**
+     * If there are previous versions of this file, this method can be used to retrieve metadata about the older versions.
+     * Alert: Versions are only tracked for Box users with premium accounts.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-file-metadata}
+     * 
+     * @param fileId the id of the file which versions you want to pull
+     * @return an instance of {@link org.mule.modules.box.model.response.FileVersionResponse} with the metadata about the versions
+     */
+    @Processor
+    public FileVersionResponse getVersionsMetadata(String fileId) {
+    	return this.jerseyUtil.get(this.apiResource.path("files").path(fileId).path("versions"), FileVersionResponse.class, 200, 201);
     }
     
     /**
@@ -901,6 +914,25 @@ public class BoxConnector implements MuleContextAware {
     public void deleteFile(String fileId, @Optional String etag) {
     	WebResource resource = this.apiResource.path("files").path(fileId);
     	this.jerseyUtil.delete(this.maybeAddIfMacth(resource, etag), String.class, 200, 204);
+    }
+    
+    /**
+     * Update a file’s information. Used to update individual or multiple fields in the file object, including renaming the file,
+     * changing it’s description, and creating a shared link for the file.
+     * To move a file, change the ID of its parent folder.
+     * An optional etag can be provided to ensure that client only updates the file if it knows about the latest version
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:update-file}
+     * 
+     * @param fileId the id of the file which metadata you want to update
+     * @param request an instance of {@link org.mule.modules.box.model.request.UpdateItemRequest} carrying the update parameters
+     * @param etag if provided, it will be used to verify that no newer version of the file is available at box 
+     * @return an instance of {@link org.mule.modules.box.model.File} with the updated state of the file
+     */
+    @Processor
+    public File updateFile(String fileId, @Optional @Default("#[payload]") UpdateItemRequest request, @Optional String etag) {
+    	WebResource resource = this.apiResource.path("files").path(fileId);
+    	return this.jerseyUtil.put(this.maybeAddIfMacth(resource, etag), File.class, 200, 201);
     }
     
 

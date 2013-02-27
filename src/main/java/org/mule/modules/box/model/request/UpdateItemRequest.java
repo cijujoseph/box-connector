@@ -25,7 +25,7 @@ import org.mule.modules.box.model.descriptor.FolderItem;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class UpdateFolderRequest implements Serializable {
+public class UpdateItemRequest implements Serializable {
 	
 	private static final long serialVersionUID = 4122128323321447203L;
 
