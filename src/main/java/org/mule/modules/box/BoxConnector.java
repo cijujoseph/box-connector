@@ -517,6 +517,25 @@ public class BoxConnector implements MuleContextAware {
     }
     
     /**
+     * Get the Items in the Trash. Retrieves the files and/or folders that have been moved to the trash using the mini format.
+     * Paginated results can be retrieved using the limit and offset parameters.
+
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-trashed-items}
+     * 
+     * @param message the current mule message
+     * @param limit the maximum amount of items to be returned (default=100, max=1000)
+     * @param offset pagination offset (default=0)
+     * @return an instance of {@link org.mule.modules.box.model.FolderItems}
+     */
+    @Processor
+    @Inject
+    public FolderItems getTrashedItems(MuleMessage message, @Optional @Default("100") Long limit, @Optional @Default("0") Long offset) {
+    	return this.getFolderItems(message, "trash", limit, offset);
+    }
+    
+    
+    
+    /**
      * Used to create a shared link for this particular folder
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:share-folder}
@@ -579,15 +598,15 @@ public class BoxConnector implements MuleContextAware {
     
     
     /**
-     * Returns the items of a folder
+     * Retrieves the files and/or folders contained within this folder without any other metadata about the folder in the mini format is returned for each item by default.
+     * Paginated results can be retrieved using the limit and offset parameters.
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:get-folder-items}
      * 
      * @param message the current mule message
      * @param folderId the id of the folder you want to inspect. If not provided then the root folder is assumed
-     * @param limit the maximum amount of items to be returned.
-     * @param offset pagination offset
-     * @param fields a comma separated list of fields to be returned. If you don't provide this, all are returned
+     * @param limit the maximum amount of items to be returned (default=100, max=1000)
+     * @param offset pagination offset (default=0)
      * @return an instance of {@link org.mule.modules.box.model.FolderItems}
      */
     @Processor
@@ -595,24 +614,19 @@ public class BoxConnector implements MuleContextAware {
     public FolderItems getFolderItems(
     					MuleMessage message,
     					@Optional @Default("0") String folderId,
-    					@Optional String limit,
-    					@Optional String offset,
-    					@Optional String fields) {
+    					@Optional @Default("100") Long limit,
+    					@Optional @Default("0") Long offset) {
     	WebResource resource = this.apiResource
 						    			.path("folders")
 						    			.path(folderId)
 						    			.path("items");
     	
-    	if (!StringUtils.isBlank(offset)) {
-    		resource = resource.queryParam("offset", offset);
+    	if (offset != null) {
+    		resource = resource.queryParam("offset", offset.toString());
     	}
     	
-    	if (!StringUtils.isBlank(limit)) {
-    		resource = resource.queryParam("limit", limit);
-    	}
-    	
-    	if (!StringUtils.isBlank(fields)) {
-    		resource = resource.queryParam("fields", fields);
+    	if (limit != null) {
+    		resource = resource.queryParam("limit", limit.toString());
     	}
     	
     	return this.jerseyUtil.get(resource, FolderItems.class, 200);
@@ -631,7 +645,7 @@ public class BoxConnector implements MuleContextAware {
     @Processor
     @Inject
     public FolderItem getFolderItem(MuleMessage message, @Optional @Default("0") String folderId, String resourceName) {
-    	FolderItems items = this.getFolderItems(message, folderId, null, null, null);
+    	FolderItems items = this.getFolderItems(message, folderId, null, null);
     	
     	for (FolderItem item : items.getEntries()) {
     		if (resourceName.equals(item.getName())) {

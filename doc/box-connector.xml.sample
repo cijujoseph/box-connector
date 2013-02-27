@@ -34,6 +34,9 @@
 <!-- BEGIN_INCLUDE(box:get-folder-items) -->
     <box:get-folder-items folderId="#[flowVars['folderID']]" />
 <!-- END_INCLUDE(box:get-folder-items) -->
+<!-- BEGIN_INCLUDE(box:get-trashed-items) -->
+    <box:get-trashed-items />
+<!-- END_INCLUDE(box:get-trashed-items) -->
 <!-- BEGIN_INCLUDE(box:delete-folder) -->
     <box:delete-folder folderId="#[flowVars['folderID']]" />
 <!-- END_INCLUDE(box:delete-folder) -->
