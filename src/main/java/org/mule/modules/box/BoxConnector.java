@@ -41,6 +41,7 @@ import org.mule.modules.box.jersey.AuthBuilderBehaviour;
 import org.mule.modules.box.jersey.BoxResponseHandler;
 import org.mule.modules.box.jersey.MediaTypesBuilderBehaviour;
 import org.mule.modules.box.model.Entries;
+import org.mule.modules.box.model.File;
 import org.mule.modules.box.model.Folder;
 import org.mule.modules.box.model.FolderItems;
 import org.mule.modules.box.model.SharedLink;
@@ -95,6 +96,14 @@ public class BoxConnector implements MuleContextAware {
 	@Optional
 	@Default("https://api.box.com/2.0/")
 	private String baseUrl;
+	
+	/**
+	 * The url of the endpoints dedicated to file uploading operations
+	 */
+	@Configurable
+	@Optional
+	@Default("https://upload.box.com/api/2.0/files")
+	private String uploadUrl;
 	
 	/**
 	 * The url where the user needs to enter his credentials
@@ -263,6 +272,8 @@ public class BoxConnector implements MuleContextAware {
     
     private WebResource apiResource;
     
+    private WebResource uploadResource;
+    
     private WebResource authResource;
     
     /**
@@ -300,6 +311,7 @@ public class BoxConnector implements MuleContextAware {
 		this.initJerseyUtil();
 		
 		this.apiResource = this.client.resource(this.baseUrl);
+		this.uploadResource = this.client.resource(this.uploadUrl);
 		this.authResource = this.client.resource(this.authUrl);
     }
     
@@ -709,7 +721,7 @@ public class BoxConnector implements MuleContextAware {
      * 
      * @param folderId the id of the target folder.
      * @param filename the name you want the file to have at box.
-     * @param content a {@link java.io.InputStream} with the contents of the file. This processor <b>IS NOT</b> responsible for closing it
+     * @param content a {@link java.io.InputStream} with the contents of the file. This stream will leave this processor in a closed state
      * @param includeHash if true a sha1 hash of the file will be calculated prior to upload. Box will use that hash
      * 			to verify that the content's hasn't been corrupted.
      * @param contentCreatedAt The time this file was created on the user’s machine. An example of a valid date is 2012-12-12T10:55:30-08:00
@@ -717,7 +729,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.File} with the information of the created file
      */
     @Processor
-    public UploadFileResponse uploadStream(
+    public File uploadStream(
     		@Optional @Default("0") String folderId,
     		String filename,
     		@Optional @Default("#[payload]") InputStream content,
@@ -725,7 +737,7 @@ public class BoxConnector implements MuleContextAware {
     		@Optional String contentCreatedAt,
     		@Optional String contentModifiedAt) {
     	
-    	WebResource.Builder resource = this.apiResource.path("files").path("content").type(MediaType.MULTIPART_FORM_DATA);
+    	WebResource.Builder resource = this.uploadResource.path("content").type(MediaType.MULTIPART_FORM_DATA);
     	
     	if (includeHash) {
 			resource.header("Content-MD5", this.hash(content));
@@ -746,8 +758,71 @@ public class BoxConnector implements MuleContextAware {
 		
     	resource.entity(form);
     	
-    	return this.jerseyUtil.post(resource, UploadFileResponse.class, 200, 201);
+    	UploadFileResponse response = this.jerseyUtil.post(resource, UploadFileResponse.class, 200, 201);
+    	return response.getEntries().get(0);
     }
+    
+    /**
+     * Uploads a new version of a file from an input stream
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:upload-new-version-stream}
+     * 
+     * @param content a {@link java.io.InputStream} with the contents of the file. This stream will leave this processor in a closed state
+     * @param fileId the id of the file to be updated
+     * @param etag if provided, it will be used to verify that no newer version of the file is available at box
+     * @param filename new name for the file
+     * @param contentModifiedAt The time this file was modified on the user’s machine. An example of a valid date is 2012-12-12T10:55:30-08:00
+     * @return an instance of {@link org.mule.modules.box.model.File} with the information of the updated file
+     */
+    @Processor
+    public File uploadNewVersionStream(
+    				@Optional @Default("#[payload]") InputStream content,
+    				String fileId,
+    				@Optional String etag,
+    				String filename,
+    				@Optional String contentModifiedAt) {
+    	
+    	WebResource.Builder resource = this.maybeAddIfMacth(this.uploadResource.path(fileId).path("content"), etag)
+    											.type(MediaType.MULTIPART_FORM_DATA);
+    	
+    	FormDataMultiPart form = new FormDataMultiPart();
+		
+		if (!StringUtils.isBlank(contentModifiedAt)) {
+			form.field("content_modified_at", contentModifiedAt);
+		}
+		
+		form.bodyPart(new StreamDataBodyPart(filename, content));
+		
+    	resource.entity(form);
+    	
+    	UploadFileResponse response = this.jerseyUtil.post(resource, UploadFileResponse.class, 200, 201);
+    	return response.getEntries().get(0);
+    }
+    
+    /**
+     * Uploads a new version of a file by reading the contents from a path in local storage
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:upload-new-version-stream}
+     * 
+     * @param path the path of the file in local storage
+     * @param fileId the id of the file to be updated 
+     * @param filename new name for the file
+     * @param etag if provided, it will be used to verify that no newer version of the file is available at box
+     * @param contentModifiedAt The time this file was modified on the user’s machine. An example of a valid date is 2012-12-12T10:55:30-08:00
+     * @return an instance of {@link org.mule.modules.box.model.File} with the information of the updated file
+     */
+    @Processor
+    public File uploadNewVersionPath(
+    		String path, 
+    		String fileId,
+    		String filename,
+    		@Optional String etag,
+    		@Optional String contentModifiedAt) {
+    	
+    	return this.uploadNewVersionStream(this.readLocalFile(path), fileId, etag, filename, contentModifiedAt);
+    }
+    
+    
     
     /**
      * Downloads a file
@@ -755,30 +830,31 @@ public class BoxConnector implements MuleContextAware {
      * {@sample.xml ../../../doc/box-connector.xml.sample box:download}
      * 
      * @param fileId the id of the file you want
+     * @param version The ID specific version of this file to download.
      * @return an input stream with the contents of the file
      */
     @Processor
-    public InputStream download(String fileId) {
-    	return this.jerseyUtil.get(this.apiResource.path("files").path(fileId).path("content"), InputStream.class, 200);
+    public InputStream download(String fileId, @Optional String version) {
+    	WebResource resource = this.apiResource.path("files").path(fileId).path("content");
+    	
+    	if (version != null) {
+    		resource.queryParam("version", version);
+    	}
+    	
+    	return this.jerseyUtil.get(resource, InputStream.class, 200);
     }
     
-    private String hash(InputStream content) {
-    	byte[] bytes = null;
-		try {
-			bytes = IOUtils.toByteArray(content);
-		} catch (IOException e) {
-			throw new RuntimeException("Error generating sha1 for content", e);
-		}
-		
-		Formatter formatter = new Formatter();
-		try {
-			for (byte b : bytes) {
-				formatter.format("%02x", b);
-			}
-			return formatter.toString();
-		} finally {
-			formatter.close();
-		}
+    /**
+     * Used to retrieve the metadata about a file.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-file-metadata}
+     * 
+     * @param fileId the id of the file you want to inspect
+     * @return an instance of {@link org.mule.modules.box.model.File}
+     */
+    @Processor
+    public File getFileMetadata(String fileId) {
+    	return this.jerseyUtil.get(this.apiResource.path("files").path(fileId), File.class, 200);
     }
     
     /**
@@ -797,36 +873,20 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.File} with the information of the created file
      */
     @Processor
-    public UploadFileResponse uploadPath(
+    public File uploadPath(
     		String path, 
     		@Optional @Default("0") String folderId,
-    		@Optional String filename,
+    		String filename,
     		@Optional @Default("false") boolean includeHash,
     		@Optional String contentCreatedAt,
     		@Optional String contentModifiedAt) {
     	
-    	
-		java.io.File file = new java.io.File(path);
-    		
-		if (!file.exists()) {
-			throw new IllegalArgumentException(String.format("File %s does not exist", path));
-		}
-		
-		if (StringUtils.isBlank(filename)) {
-			filename = file.getName();
-		}
-    	
-		byte[] content = null;
-		
-		try {
-			FileUtils.readFileToByteArray(file);
-		} catch (IOException e) {
-			throw new RuntimeException(String.format("Error reading file at %s", path), e);
-		}
-		
-		return this.uploadStream(folderId, filename,
-								new ByteArrayInputStream(content), includeHash,
-								contentCreatedAt, contentModifiedAt);
+		return this.uploadStream(folderId,
+								filename,
+								this.readLocalFile(path),
+								includeHash,
+								contentCreatedAt,
+								contentModifiedAt);
     }
     
     /**
@@ -885,6 +945,21 @@ public class BoxConnector implements MuleContextAware {
     	return builder;
     }
     
+    private InputStream readLocalFile(String path) {
+    	java.io.File file = new java.io.File(path);
+		
+		if (!file.exists()) {
+			throw new IllegalArgumentException(String.format("File %s does not exist", path));
+		}
+    	
+		try {
+			return new ByteArrayInputStream(FileUtils.readFileToByteArray(file));
+		} catch (IOException e) {
+			throw new RuntimeException(String.format("Error reading file at %s", path), e);
+		}
+    }
+    
+    
     private Flow fetchFlow(String flowname) {
     	if (StringUtils.isBlank(flowname)) {
     		return null;
@@ -899,7 +974,7 @@ public class BoxConnector implements MuleContextAware {
     	return flow;
     }
     
-   public MuleMessage saveAuthToken(MuleMessage message, String ticket, String authToken) {
+    public MuleMessage saveAuthToken(MuleMessage message, String ticket, String authToken) {
 	   
 	   if (StringUtils.isBlank(ticket)) {
 		   throw new IllegalArgumentException("auth process did not return a ticket");
@@ -936,7 +1011,26 @@ public class BoxConnector implements MuleContextAware {
 		   }
 	   }
    }
-    
+   
+   private String hash(InputStream content) {
+   	byte[] bytes = null;
+		try {
+			bytes = IOUtils.toByteArray(content);
+		} catch (IOException e) {
+			throw new RuntimeException("Error generating sha1 for content", e);
+		}
+		
+		Formatter formatter = new Formatter();
+		try {
+			for (byte b : bytes) {
+				formatter.format("%02x", b);
+			}
+			return formatter.toString();
+		} finally {
+			formatter.close();
+		}
+   }
+   
 	public String getCallbackPath() {
 		return callbackPath;
 	}
@@ -1020,5 +1114,13 @@ public class BoxConnector implements MuleContextAware {
 
 	public void setAuthUrl(String authUrl) {
 		this.authUrl = authUrl;
+	}
+
+	public String getUploadUrl() {
+		return uploadUrl;
+	}
+
+	public void setUploadUrl(String uploadUrl) {
+		this.uploadUrl = uploadUrl;
 	}
 }

@@ -19,9 +19,9 @@ import org.mule.api.MessagingException;
 import org.mule.api.MuleEvent;
 import org.mule.api.MuleMessage;
 import org.mule.construct.Flow;
+import org.mule.modules.box.model.File;
 import org.mule.modules.box.model.Folder;
 import org.mule.modules.box.model.FolderItems;
-import org.mule.modules.box.model.response.UploadFileResponse;
 import org.mule.tck.junit4.FunctionalTestCase;
 
 /**
@@ -96,8 +96,8 @@ public class BoxConnectorTest extends FunctionalTestCase {
 		InputStream downloaded = null;
 		String fileId = null;
 		try {
-			UploadFileResponse file = this.doUpload(test);
-			fileId = file.getEntries().get(0).getId();
+			File file = this.doUpload(test);
+			fileId = file.getId();
 			downloaded = (InputStream) this.callFlow(fileId, "downloadFlow").getPayload();
 			String content = IOUtils.toString(downloaded);
 			test = this.getTestFile(); // re read the stream which is closed at this point
@@ -109,26 +109,40 @@ public class BoxConnectorTest extends FunctionalTestCase {
 				this.callFlow(fileId, "testDelete");
 			}
 		}
-		
-		
+	}
+	
+	@Test
+	public void uploadNewVersion() throws Exception {
+		InputStream test = this.getTestFile();
+		String fileId = null;
+		try {
+			File file = this.doUpload(test);
+			fileId = file.getId();
+			
+			test = this.getTestFile(); // re read the stream which is closed at this point
+			MuleEvent event = getTestEvent(test);
+			event.getMessage().setInvocationProperty("fileId", fileId);
+			Flow flow = (Flow) getFlowConstruct("testUploadNewVersion");
+			flow.process(event);
+		} finally {
+			IOUtils.closeQuietly(test);
+			if (fileId != null) {
+				this.callFlow(fileId, "testDelete");
+			}
+		}
+
 	}
 	
 	@Test
 	public void upload() throws Exception {
 		InputStream in = this.getTestFile();
-		UploadFileResponse file = this.doUpload(in);
-		Assert.assertEquals(file.getTotalCount(), 1);
-		Assert.assertEquals(file.getEntries().get(0).getName(), "testfile.txt");
-		
-		this.callFlow(file.getEntries().get(0).getId(), "testDelete");
+		File file = this.doUpload(in);
+		Assert.assertEquals(file.getName(), "testfile.txt");
+		this.callFlow(file.getId(), "testDelete");
 	}
 	
-	private UploadFileResponse doUpload(InputStream in) throws Exception {
-		UploadFileResponse file = (UploadFileResponse) this.callFlow(in, "testUpload").getPayload();
-		Assert.assertEquals(file.getTotalCount(), 1);
-		Assert.assertEquals(file.getEntries().get(0).getName(), "testfile.txt");
-		
-		return file;
+	private File doUpload(InputStream in) throws Exception {
+		return (File) this.callFlow(in, "testUpload").getPayload();
 	}
 	
 	private InputStream getTestFile() {

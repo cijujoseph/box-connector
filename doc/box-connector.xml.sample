@@ -11,14 +11,20 @@
 	<box:get-folder />
 <!-- END_INCLUDE(box:get-folder) -->
 <!-- BEGIN_INCLUDE(box:upload-path) -->
-    <box:upload-path path="hello.txt"   />
+    <box:upload-path path="hello.txt" filename="hello.txt" />
 <!-- END_INCLUDE(box:upload-path) -->
 <!-- BEGIN_INCLUDE(box:download) -->
     <box:download fileId="#[flowVars['fileId']]" />
 <!-- END_INCLUDE(box:download) -->
+<!-- BEGIN_INCLUDE(box:get-file-metadata) -->
+    <box:get-file-metadata fileId="#[flowVars['fileId']]" />
+<!-- END_INCLUDE(box:get-file-metadata) -->
 <!-- BEGIN_INCLUDE(box:upload-stream) -->
     <box:upload-stream filename="hello.txt" />
 <!-- END_INCLUDE(box:upload-stream) -->
+<!-- BEGIN_INCLUDE(box:upload-new-version-stream) -->
+    <box:upload-new-version-stream fileId="#[flowVars['fileId']]" filename="myFile.txt" />
+<!-- END_INCLUDE(box:upload-new-version-stream) -->
 <!-- BEGIN_INCLUDE(box:delete-file) -->
     <box:delete-file fileId="#[payload.id]" />
 <!-- END_INCLUDE(box:delete-file) -->

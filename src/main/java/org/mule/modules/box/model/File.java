@@ -8,11 +8,10 @@
 
 package org.mule.modules.box.model;
 
-import java.io.Serializable;
-
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import org.mule.modules.box.model.descriptor.EntityDescriptor;
 import org.mule.modules.box.model.descriptor.FolderItem;
 
 /**
@@ -21,14 +20,10 @@ import org.mule.modules.box.model.descriptor.FolderItem;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class File implements Serializable {
+public class File extends EntityDescriptor {
 	
 	private static final long serialVersionUID = 6127755562219178478L;
 	
-	private String type;
-	private String id;
-	private String sequenceId;
-	private String name;
 	private String description;
 	private Long size;
 	private String path;
@@ -40,38 +35,11 @@ public class File implements Serializable {
 	private String sha1;
 	private String itemStatus;
 	private SharedLink sharedLink;
-	private String etag;
 	private UserInfo createdBy;
 	private UserInfo modifiedBy;
 	private UserInfo ownedBy;
 	private FolderItem parent;
 	
-    public String getType() {
-		return type;
-	}
-	public void setType(String type) {
-		this.type = type;
-	}
-	public String getId() {
-		return id;
-	}
-	public void setId(String id) {
-		this.id = id;
-	}
-	
-	@XmlElement(name="sequence_id")
-	public String getSequenceId() {
-		return sequenceId;
-	}
-	public void setSequenceId(String sequenceId) {
-		this.sequenceId = sequenceId;
-	}
-	public String getName() {
-		return name;
-	}
-	public void setName(String name) {
-		this.name = name;
-	}
 	public String getDescription() {
 		return description;
 	}
@@ -138,12 +106,6 @@ public class File implements Serializable {
 	public void setSharedLink(SharedLink sharedLink) {
 		this.sharedLink = sharedLink;
 	}
-	public String getEtag() {
-		return etag;
-	}
-	public void setEtag(String etag) {
-		this.etag = etag;
-	}
 	
 	@XmlElement(name="created_by")
 	public UserInfo getCreatedBy() {
@@ -188,5 +150,6 @@ public class File implements Serializable {
 	public void setItemStatus(String itemStatus) {
 		this.itemStatus = itemStatus;
 	}
+	
 	
 }

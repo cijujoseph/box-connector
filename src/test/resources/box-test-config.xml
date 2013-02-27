@@ -37,6 +37,10 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
     	<box:upload-stream filename="testfile.txt" includeHash="false" contentCreatedAt="2012-12-12T10:55:30-08:00" contentModifiedAt="2012-12-12T10:55:30-08:00" />
     </flow>
     
+    <flow name="testUploadNewVersion">
+    	<box:upload-new-version-stream fileId="#[flowVars['fileId']]" filename="testfile.txt" />
+    </flow>
+    
     <flow name="testDelete">
     	<box:delete-file fileId="#[payload]" />
     </flow>

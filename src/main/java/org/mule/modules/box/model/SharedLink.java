@@ -28,6 +28,7 @@ public class SharedLink implements Serializable {
 	private boolean passwordEnabled;
 	private String url;
 	private String downloadUrl;
+	private String vanityUrl;
 	private Long previewCount;
 	private Long downloadCount;
 	private String unsharedAt;
@@ -101,5 +102,15 @@ public class SharedLink implements Serializable {
 	public Access getAccess() {
 		return access;
 	}
+
+	@XmlElement(name="vanity_url")
+	public String getVanityUrl() {
+		return vanityUrl;
+	}
+
+	public void setVanityUrl(String vanityUrl) {
+		this.vanityUrl = vanityUrl;
+	}
+	
 	
 }
