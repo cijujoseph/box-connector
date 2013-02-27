@@ -13,6 +13,9 @@
 <!-- BEGIN_INCLUDE(box:upload-path) -->
     <box:upload-path path="hello.txt"   />
 <!-- END_INCLUDE(box:upload-path) -->
+<!-- BEGIN_INCLUDE(box:download) -->
+    <box:download fileId="#[flowVars['fileId']]" />
+<!-- END_INCLUDE(box:download) -->
 <!-- BEGIN_INCLUDE(box:upload-stream) -->
     <box:upload-stream filename="hello.txt" />
 <!-- END_INCLUDE(box:upload-stream) -->

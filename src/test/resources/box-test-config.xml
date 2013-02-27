@@ -38,7 +38,7 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
     </flow>
     
     <flow name="testDelete">
-    	<box:delete-file fileId="#[payload.entries[0].id]" />
+    	<box:delete-file fileId="#[payload]" />
     </flow>
     
     <flow name="getBoxToken">
@@ -67,6 +67,10 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
     
     <flow name="testTrashed">
     	<box:get-trashed-items />
+    </flow>
+    
+    <flow name="downloadFlow">
+    	<box:download fileId="#[payload]" />
     </flow>
     
 </mule>

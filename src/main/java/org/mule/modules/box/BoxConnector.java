@@ -749,6 +749,19 @@ public class BoxConnector implements MuleContextAware {
     	return this.jerseyUtil.post(resource, UploadFileResponse.class, 200, 201);
     }
     
+    /**
+     * Downloads a file
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:download}
+     * 
+     * @param fileId the id of the file you want
+     * @return an input stream with the contents of the file
+     */
+    @Processor
+    public InputStream download(String fileId) {
+    	return this.jerseyUtil.get(this.apiResource.path("files").path(fileId).path("content"), InputStream.class, 200);
+    }
+    
     private String hash(InputStream content) {
     	byte[] bytes = null;
 		try {

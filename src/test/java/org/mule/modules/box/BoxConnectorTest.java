@@ -12,6 +12,7 @@ import java.io.InputStream;
 
 import junit.framework.Assert;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.junit.Test;
 import org.mule.api.MessagingException;
@@ -90,15 +91,51 @@ public class BoxConnectorTest extends FunctionalTestCase {
 	}
 	
 	@Test
-	public void upload() throws Exception {
-		InputStream in = this.getClass().getResourceAsStream("/test.txt");
-		assert in != null : "Could not load file";
+	public void downloadFile() throws Exception {
+		InputStream test = this.getTestFile();
+		InputStream downloaded = null;
+		String fileId = null;
+		try {
+			UploadFileResponse file = this.doUpload(test);
+			fileId = file.getEntries().get(0).getId();
+			downloaded = (InputStream) this.callFlow(fileId, "downloadFlow").getPayload();
+			String content = IOUtils.toString(downloaded);
+			test = this.getTestFile(); // re read the stream which is closed at this point
+			Assert.assertEquals(content, IOUtils.toString(test));
+		} finally {
+			IOUtils.closeQuietly(test);
+			IOUtils.closeQuietly(downloaded);
+			if (fileId != null) {
+				this.callFlow(fileId, "testDelete");
+			}
+		}
 		
+		
+	}
+	
+	@Test
+	public void upload() throws Exception {
+		InputStream in = this.getTestFile();
+		UploadFileResponse file = this.doUpload(in);
+		Assert.assertEquals(file.getTotalCount(), 1);
+		Assert.assertEquals(file.getEntries().get(0).getName(), "testfile.txt");
+		
+		this.callFlow(file.getEntries().get(0).getId(), "testDelete");
+	}
+	
+	private UploadFileResponse doUpload(InputStream in) throws Exception {
 		UploadFileResponse file = (UploadFileResponse) this.callFlow(in, "testUpload").getPayload();
 		Assert.assertEquals(file.getTotalCount(), 1);
 		Assert.assertEquals(file.getEntries().get(0).getName(), "testfile.txt");
 		
-		this.callFlow(file, "testDelete");
+		return file;
+	}
+	
+	private InputStream getTestFile() {
+		InputStream in = this.getClass().getResourceAsStream("/test.txt");
+		assert in != null : "Could not load file";
+		
+		return in;
 	}
 	
 	private MuleMessage callFlow(Object payload, String flowName) throws Exception {
