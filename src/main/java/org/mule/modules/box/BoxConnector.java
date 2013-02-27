@@ -556,6 +556,18 @@ public class BoxConnector implements MuleContextAware {
     }
     
     /**
+     * Permanently deletes an item that is in the trash. The item will no longer exist in Box. This action cannot be undone.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:perm-delete-folder}
+     * 
+     * @param folderId the id of the folder to be permanently deleted
+     */
+    @Processor
+    public void permDeleteFolder(String folderId) {
+    	this.jerseyUtil.delete(this.apiResource.path("folders").path(folderId).path("trash"), String.class, 204);
+    }
+    
+    /**
      * Used to create a shared link for this particular folder
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:share-folder}
