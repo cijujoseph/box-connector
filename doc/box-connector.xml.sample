@@ -25,7 +25,6 @@
 <!-- BEGIN_INCLUDE(box:update-folder) -->
     <box:update-folder folderId="#[flowVars['folderId']]" />
 <!-- END_INCLUDE(box:update-folder) -->
-
 <!-- BEGIN_INCLUDE(box:copy-folder) -->
     <box:copy-folder folderId="my new folder" />
 <!-- END_INCLUDE(box:copy-folder) -->

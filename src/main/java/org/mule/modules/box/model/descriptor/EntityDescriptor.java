@@ -10,6 +10,8 @@ package org.mule.modules.box.model.descriptor;
 
 import java.io.Serializable;
 
+import javax.xml.bind.annotation.XmlElement;
+
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 /**
@@ -25,7 +27,15 @@ public class EntityDescriptor implements Serializable {
 	private String type;
 	private String id;
 	private String name;
+	private String etag;
+	private String sequenceId;
 	
+	public String getEtag() {
+		return etag;
+	}
+	public void setEtag(String etag) {
+		this.etag = etag;
+	}
 	public String getType() {
 		return type;
 	}
@@ -43,5 +53,14 @@ public class EntityDescriptor implements Serializable {
 	}
 	public void setName(String name) {
 		this.name = name;
+	}
+	
+	@XmlElement(name="sequence_id")
+	public String getSequenceId() {
+		return sequenceId;
+	}
+	
+	public void setSequenceId(String sequenceId) {
+		this.sequenceId = sequenceId;
 	}
 }

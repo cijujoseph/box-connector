@@ -8,8 +8,6 @@
 
 package org.mule.modules.box.model.descriptor;
 
-import javax.xml.bind.annotation.XmlElement;
-
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 /**
@@ -22,8 +20,6 @@ public class FolderItem extends EntityDescriptor {
 
 	private static final long serialVersionUID = 3406333075012024404L;
 	
-	private String sequenceId;
-	private String etag;
 	private String sha1;
 	
 	public boolean isFolder() {
@@ -34,23 +30,6 @@ public class FolderItem extends EntityDescriptor {
 		return "file".equals(this.getType());
 	}
 	
-	@XmlElement(name="sequence_id")
-	public String getSequenceId() {
-		return sequenceId;
-	}
-	
-	public void setSequenceId(String sequenceId) {
-		this.sequenceId = sequenceId;
-	}
-
-	public String getEtag() {
-		return etag;
-	}
-
-	public void setEtag(String etag) {
-		this.etag = etag;
-	}
-
 	public String getSha1() {
 		return sha1;
 	}

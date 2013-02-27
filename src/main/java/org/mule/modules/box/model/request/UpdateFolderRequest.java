@@ -14,9 +14,10 @@ import javax.xml.bind.annotation.XmlAttribute;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.mule.modules.box.model.Access;
-import org.mule.modules.box.model.Folder;
+import org.mule.modules.box.model.FolderUploadEmail;
 import org.mule.modules.box.model.Permissions;
 import org.mule.modules.box.model.SharedLink;
+import org.mule.modules.box.model.descriptor.FolderItem;
 
 /**
  * 
@@ -41,7 +42,7 @@ public class UpdateFolderRequest implements Serializable {
 	/**
 	 * 	The parent folder of this file
 	 */
-	private Folder parent;
+	private FolderItem parent;
 	
 	/**
 	 * The ID of the parent folder
@@ -81,7 +82,7 @@ public class UpdateFolderRequest implements Serializable {
 	/**
 	 * The email-to-upload address for this folder
 	 */
-	private String folderUploadEmail;
+	private FolderUploadEmail folderUploadEmail;
 
 	public String getName() {
 		return name;
@@ -99,11 +100,11 @@ public class UpdateFolderRequest implements Serializable {
 		this.description = description;
 	}
 
-	public Folder getParent() {
+	public FolderItem getParent() {
 		return parent;
 	}
 
-	public void setParent(Folder parent) {
+	public void setParent(FolderItem parent) {
 		this.parent = parent;
 	}
 
@@ -169,11 +170,11 @@ public class UpdateFolderRequest implements Serializable {
 	}
 
 	@XmlAttribute(name="folder_upload_email")
-	public String getFolderUploadEmail() {
+	public FolderUploadEmail getFolderUploadEmail() {
 		return folderUploadEmail;
 	}
 
-	public void setFolderUploadEmail(String folderUploadEmail) {
+	public void setFolderUploadEmail(FolderUploadEmail folderUploadEmail) {
 		this.folderUploadEmail = folderUploadEmail;
 	}
 	

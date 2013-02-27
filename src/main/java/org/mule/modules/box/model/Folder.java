@@ -8,6 +8,7 @@
 
 package org.mule.modules.box.model;
 
+import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
@@ -26,11 +27,11 @@ public class Folder extends EntityDescriptor {
 	private static final long serialVersionUID = -4254960125347133726L;
 	
 	private String sequenceId;
-	private String etag;
 	private String createdAt;
 	private String modifiedAt;
 	private String description;
 	private String itemStatus;
+	private Entries paths;
 	private Long size;
 	private SharedLink sharedLink;
 	private UserDescriptor createdBy;
@@ -38,7 +39,8 @@ public class Folder extends EntityDescriptor {
 	private UserDescriptor ownedBy;
 	private FolderItem parent;
 	private FolderItems items;
-    	
+	
+	
 	@XmlElement(name="sequence_id")
 	public String getSequenceId() {
 		return sequenceId;
@@ -121,13 +123,6 @@ public class Folder extends EntityDescriptor {
 	public void setItems(FolderItems items) {
 		this.items = items;
 	}
-	public String getEtag() {
-		return etag;
-	}
-	public void setEtag(String etag) {
-		this.etag = etag;
-	}
-	
 	@XmlElement(name="item_status")
 	public String getItemStatus() {
 		return itemStatus;
@@ -135,4 +130,13 @@ public class Folder extends EntityDescriptor {
 	public void setItemStatus(String itemStatus) {
 		this.itemStatus = itemStatus;
 	}
+	
+	@XmlAttribute(name="path_collection")
+	public Entries getPaths() {
+		return paths;
+	}
+	public void setPaths(Entries paths) {
+		this.paths = paths;
+	}
+	
 }
