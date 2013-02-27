@@ -452,13 +452,11 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:get-folder}
      * 
-     * @param message the current mule message
      * @param folderId the id of the fodler you want to get. 0 means root
      * @return an instance of {@link org.mule.modules.box.model.Folder}
      */
     @Processor
-    @Inject
-    public Folder getFolder(MuleMessage message, @Optional @Default("0") String folderId) {
+    public Folder getFolder(@Optional @Default("0") String folderId) {
     	return this.jerseyUtil.get(this.apiResource.path("folders").path(folderId), Folder.class, 200);
     }
     
@@ -467,14 +465,12 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:create-folder}
      * 
-     * @param message the current mule message
      * @param parentId the id of the parent folder. If not provided then the root will be used
      * @param folderName the name of the folder
      * @return an instance of {@link org.mule.modules.box.model.Folder} representing the newly created folder
      */
     @Processor
-    @Inject
-    public Folder createFolder(MuleMessage message, @Optional @Default("0") String parentId, String folderName) {
+    public Folder createFolder(@Optional @Default("0") String parentId, String folderName) {
     	return this.jerseyUtil.post(this.apiResource.path("folders")
     							.entity(new CreateFolderRequest(folderName, parentId)),
 	    						Folder.class,
@@ -489,15 +485,13 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:update-folder}
      * 
-     * @param message the current mule message
      * @param request an instance of {@link org.mule.modules.box.model.request.UpdateFolderRequest} with the attributes you want to change
      * @param folderId the id of the folder to be modified
      * @param etag if provided, it will be used to verify that no newer version of the file is available at box
      * @return an instance of {@link org.mule.modules.box.model.Folder} that represents the updated folder
      */
     @Processor
-    @Inject
-    public Folder updateFolder(MuleMessage message, @Optional @Default("#[payload]") UpdateFolderRequest request, String folderId, @Optional String etag) {
+    public Folder updateFolder(@Optional @Default("#[payload]") UpdateFolderRequest request, String folderId, @Optional String etag) {
     	WebResource resource = this.apiResource.path("folders").path(folderId);
     	return this.jerseyUtil.put(this.maybeAddIfMacth(resource, etag), Folder.class, 200, 201);
     }
@@ -507,13 +501,11 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:get-folder-discussions}
      * 
-     * @param message the current mule message
      * @param folderId the id of the folder which discussions  you want
      * @return an instance of {@link org.mule.modules.box.model.Entries}
      */
     @Processor
-    @Inject
-    public Entries getFolderDiscussions(MuleMessage message, String folderId) {
+    public Entries getFolderDiscussions(String folderId) {
     	return this.jerseyUtil.get(this.apiResource.path("folders").path(folderId).path("discussions"), Entries.class, 200, 204);
     }
     
@@ -523,15 +515,13 @@ public class BoxConnector implements MuleContextAware {
 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:get-trashed-items}
      * 
-     * @param message the current mule message
      * @param limit the maximum amount of items to be returned (default=100, max=1000)
      * @param offset pagination offset (default=0)
      * @return an instance of {@link org.mule.modules.box.model.FolderItems}
      */
     @Processor
-    @Inject
-    public FolderItems getTrashedItems(MuleMessage message, @Optional @Default("100") Long limit, @Optional @Default("0") Long offset) {
-    	return this.getFolderItems(message, "trash", limit, offset);
+    public FolderItems getTrashedItems(@Optional @Default("100") Long limit, @Optional @Default("0") Long offset) {
+    	return this.getFolderItems("trash", limit, offset);
     }
     
     /**
@@ -541,12 +531,12 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:restore-trashed-folder}
      * 
-     * @param message the current mule message
      * @param folderId the id of the trashed folder being restored
      * @param request an instance of {@link org.mule.modules.box.model.request.RestoreTrashedFolderRequest} with the request parameters
      * @return an instance of {@link org.mule.modules.box.model.Folder} with the restored folder new state
      */
-    public Folder restoreTrashedFolder(MuleMessage message, String folderId, @Optional @Default("#[payload]") RestoreTrashedFolderRequest request) {
+    @Processor
+    public Folder restoreTrashedFolder(String folderId, @Optional @Default("#[payload]") RestoreTrashedFolderRequest request) {
     	return this.jerseyUtil.post(this.apiResource
 	    								.path("folders")
 	    								.path(folderId)
@@ -572,14 +562,12 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:share-folder}
      * 
-     * @param message the current mule message
      * @param folderId the id of the folder you want to share
      * @param sharedLink an instance of {@link org.mule.modules.box.model.SharedLink} with the information about the share
      * @return an instance of {@link org.mule.modules.box.model.Folder} representing the shared folder
      */
     @Processor
-    @Inject
-    public Folder shareFolder(MuleMessage message, String folderId, @Optional @Default("#[payload]") SharedLink sharedLink) {
+    public Folder shareFolder(String folderId, @Optional @Default("#[payload]") SharedLink sharedLink) {
     	CreateSharedLinkRequest request = new CreateSharedLinkRequest();
     	request.setSharedLink(sharedLink);
     	
@@ -595,14 +583,12 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:unshare-folder}
      * 
-     * @param message the current mule message
      * @param folderId the id of the folder you want to unshare
      * @return an instance of {@link org.mule.modules.box.model.Folder} representing the unshared folder
      */
     @Processor
-    @Inject
-    public Folder unshareFolder(MuleMessage message, String folderId) {
-    	return this.shareFolder(message, folderId, null);
+    public Folder unshareFolder(String folderId) {
+    	return this.shareFolder(folderId, null);
     }
     
     /**
@@ -610,14 +596,12 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:share-folder}
      * 
-     * @param message the current mule message
      * @param parentId the id of the parent folder that will hold the copy. If not provided then the root will be used
      * @param folderId the if od the folder being copied
      * @return an instance of {@link org.mule.modules.box.model.Folder} representing the copy
      */
     @Processor
-    @Inject
-    public Folder copyFolder(MuleMessage message, @Optional @Default("0") String parentId, String folderId) {
+    public Folder copyFolder(@Optional @Default("0") String parentId, String folderId) {
     	return this.jerseyUtil.post(this.apiResource.path("folders")
     								.path(folderId)
     								.path("copy")
@@ -635,16 +619,13 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:get-folder-items}
      * 
-     * @param message the current mule message
      * @param folderId the id of the folder you want to inspect. If not provided then the root folder is assumed
      * @param limit the maximum amount of items to be returned (default=100, max=1000)
      * @param offset pagination offset (default=0)
      * @return an instance of {@link org.mule.modules.box.model.FolderItems}
      */
     @Processor
-    @Inject
     public FolderItems getFolderItems(
-    					MuleMessage message,
     					@Optional @Default("0") String folderId,
     					@Optional @Default("100") Long limit,
     					@Optional @Default("0") Long offset) {
@@ -669,15 +650,13 @@ public class BoxConnector implements MuleContextAware {
      *  
      * {@sample.xml ../../../doc/box-connector.xml.sample box:get-folder-item}
      * 
-     * @param message the current mule message
      * @param folderId the id of the folder you want to inspect. If not provided then the root folder is assumed
      * @param resourceName the name you want to test
      * @return an instance of {@link org.mule.modules.box.model.descriptor.FolderItem} with that about the found item. {@code null} if the item is not found
      */
     @Processor
-    @Inject
-    public FolderItem getFolderItem(MuleMessage message, @Optional @Default("0") String folderId, String resourceName) {
-    	FolderItems items = this.getFolderItems(message, folderId, null, null);
+    public FolderItem getFolderItem(@Optional @Default("0") String folderId, String resourceName) {
+    	FolderItems items = this.getFolderItems(folderId, null, null);
     	
     	for (FolderItem item : items.getEntries()) {
     		if (resourceName.equals(item.getName())) {
@@ -693,13 +672,11 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:delete-folder}
      * 
-     * @param message the current mule message
      * @param folderId the id of the folder to be deleted
      * @param recursive Whether to delete this folder if it has items inside of it
      */
     @Processor
-    @Inject
-    public void deleteFolder(MuleMessage message, String folderId, @Optional @Default("true") Boolean recursive) {
+    public void deleteFolder(String folderId, @Optional @Default("true") Boolean recursive) {
     	this.jerseyUtil.delete(
     			this.apiResource
     				.path("folders")
@@ -717,7 +694,6 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:upload-stream}
      * 
-     * @param message the current mule message
      * @param folderId the id of the target folder.
      * @param filename the name you want the file to have at box.
      * @param content a {@link java.io.InputStream} with the contents of the file. This processor <b>IS NOT</b> responsible for closing it
@@ -728,9 +704,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.File} with the information of the created file
      */
     @Processor
-    @Inject
     public UploadFileResponse uploadStream(
-    		MuleMessage message,
     		@Optional @Default("0") String folderId,
     		String filename,
     		@Optional @Default("#[payload]") InputStream content,
@@ -786,7 +760,6 @@ public class BoxConnector implements MuleContextAware {
      *
      * {@sample.xml ../../../doc/box-connector.xml.sample box:upload-path}
      * 
-     * @param message the current mule message
      * @param path the path of the file in local storage
      * @param folderId the id of the target folder.
      * @param filename the name you want the file to have at box. If not provided, the name on current storage will be used
@@ -798,9 +771,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.File} with the information of the created file
      */
     @Processor
-    @Inject
     public UploadFileResponse uploadPath(
-    		MuleMessage message,
     		String path, 
     		@Optional @Default("0") String folderId,
     		@Optional String filename,
@@ -827,7 +798,7 @@ public class BoxConnector implements MuleContextAware {
 			throw new RuntimeException(String.format("Error reading file at %s", path), e);
 		}
 		
-		return this.uploadStream(message, folderId, filename,
+		return this.uploadStream(folderId, filename,
 								new ByteArrayInputStream(content), includeHash,
 								contentCreatedAt, contentModifiedAt);
     }
@@ -837,13 +808,11 @@ public class BoxConnector implements MuleContextAware {
      * 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:delete-file}
      * 
-     * @param message the current mule message
      * @param fileId the id of the file to be deleted
      * @param etag if provided, it will be used to verify that no newer version of the file is available at box
      */
     @Processor
-    @Inject
-    public void deleteFile(MuleMessage message, String fileId, @Optional String etag) {
+    public void deleteFile(String fileId, @Optional String etag) {
     	WebResource resource = this.apiResource.path("files").path(fileId);
     	this.jerseyUtil.delete(this.maybeAddIfMacth(resource, etag), String.class, 200, 204);
     }
