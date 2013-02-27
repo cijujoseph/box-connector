@@ -40,6 +40,7 @@ import org.mule.construct.Flow;
 import org.mule.modules.box.jersey.AuthBuilderBehaviour;
 import org.mule.modules.box.jersey.BoxResponseHandler;
 import org.mule.modules.box.jersey.MediaTypesBuilderBehaviour;
+import org.mule.modules.box.model.Entries;
 import org.mule.modules.box.model.Folder;
 import org.mule.modules.box.model.FolderItems;
 import org.mule.modules.box.model.SharedLink;
@@ -498,6 +499,21 @@ public class BoxConnector implements MuleContextAware {
     public Folder updateFolder(MuleMessage message, @Optional @Default("#[payload]") UpdateFolderRequest request, String folderId, @Optional String etag) {
     	WebResource resource = this.apiResource.path("folders").path(folderId);
     	return this.jerseyUtil.put(this.maybeAddIfMacth(resource, etag), Folder.class, 200, 201);
+    }
+    
+    /**
+     * Retrieves the discussions on a particular folder, if any exist.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-folder-discussions}
+     * 
+     * @param message the current mule message
+     * @param folderId the id of the folder which discussions  you want
+     * @return an instance of {@link org.mule.modules.box.model.Entries}
+     */
+    @Processor
+    @Inject
+    public Entries getFolderDiscussions(MuleMessage message, String folderId) {
+    	return this.jerseyUtil.get(this.apiResource.path("folders").path(folderId).path("discussions"), Entries.class, 200, 204);
     }
     
     /**
