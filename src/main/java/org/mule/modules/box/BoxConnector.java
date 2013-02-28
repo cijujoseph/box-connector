@@ -631,7 +631,7 @@ public class BoxConnector implements MuleContextAware {
     @Processor
     public Folder copyFolder(@Optional @Default("0") String targetFolderId, String folderId) {
     	FolderItem parent = new FolderItem();
-    	parent.setId(folderId);
+    	parent.setId(targetFolderId);
     	CopyItemRequest request = new CopyItemRequest();
     	request.setParent(parent);
     	
@@ -952,7 +952,7 @@ public class BoxConnector implements MuleContextAware {
     @Processor
     public File copyFile(@Optional @Default("0") String targetFolderId, String fileId) {
     	FolderItem parent = new FolderItem();
-    	parent.setId(fileId);
+    	parent.setId(targetFolderId);
     	CopyItemRequest request = new CopyItemRequest();
     	request.setParent(parent);
     	
