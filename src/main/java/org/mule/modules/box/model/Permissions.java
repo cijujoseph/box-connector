@@ -24,22 +24,22 @@ public class Permissions implements Serializable {
 
 	private static final long serialVersionUID = 5764159592895329147L;
 	
-	private boolean preview;
-	private boolean download;
+	private Boolean preview;
+	private Boolean download;
 	
 	@XmlElement("can_preview")
-	public boolean isPreview() {
+	public Boolean isPreview() {
 		return preview;
 	}
-	public void setPreview(boolean preview) {
+	public void setPreview(Boolean preview) {
 		this.preview = preview;
 	}
 	
 	@XmlElement("can_download")
-	public boolean isDownload() {
+	public Boolean isDownload() {
 		return download;
 	}
-	public void setDownload(boolean download) {
+	public void setDownload(Boolean download) {
 		this.download = download;
 	}
 	

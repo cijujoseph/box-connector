@@ -25,7 +25,7 @@ public class SharedLink implements Serializable {
 	private static final long serialVersionUID = -7687170653187915720L;
 	
 	private Access access;
-	private boolean passwordEnabled;
+	private Boolean passwordEnabled;
 	private String url;
 	private String downloadUrl;
 	private String vanityUrl;
@@ -35,11 +35,11 @@ public class SharedLink implements Serializable {
 	private Permissions permissions;
 	
     @XmlElement(name="password_enabled")
-    public boolean isPasswordEnabled() {
+    public Boolean isPasswordEnabled() {
 		return passwordEnabled;
 	}
 
-	public void setPasswordEnabled(boolean passwordEnabled) {
+	public void setPasswordEnabled(Boolean passwordEnabled) {
 		this.passwordEnabled = passwordEnabled;
 	}
 

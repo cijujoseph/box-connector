@@ -33,7 +33,7 @@ public class Collaboration extends EntityDescriptor {
 	/**
 	 * The user who created this collaboration
 	 */
-	private UserInfo createdBy;
+	private User createdBy;
 	
 	/**
 	 * The time this collaboration was created
@@ -58,7 +58,7 @@ public class Collaboration extends EntityDescriptor {
 	/**
 	 * The user who the collaboration applies to
 	 */
-	private UserInfo accessibleBy;
+	private User accessibleBy;
 	
 	/**
 	 * The level of access this user has
@@ -76,10 +76,10 @@ public class Collaboration extends EntityDescriptor {
 	private Item item;
 	
 	@XmlElement(name="created_by")
-	public UserInfo getCreatedBy() {
+	public User getCreatedBy() {
 		return createdBy;
 	}
-	public void setCreatedBy(UserInfo createdBy) {
+	public void setCreatedBy(User createdBy) {
 		this.createdBy = createdBy;
 	}
 	
@@ -114,10 +114,10 @@ public class Collaboration extends EntityDescriptor {
 	}
 	
 	@XmlElement(name="accessible_by")
-	public UserInfo getAccessibleBy() {
+	public User getAccessibleBy() {
 		return accessibleBy;
 	}
-	public void setAccessibleBy(UserInfo accessibleBy) {
+	public void setAccessibleBy(User accessibleBy) {
 		this.accessibleBy = accessibleBy;
 	}
 	public String getRole() {

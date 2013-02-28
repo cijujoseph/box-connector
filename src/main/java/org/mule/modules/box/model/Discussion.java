@@ -37,7 +37,7 @@ public class Discussion extends EntityDescriptor {
 	/**
 	 * The user who created this discussion
 	 */
-	private UserInfo createdBy;
+	private User createdBy;
 	
 	/**
 	 * The time this discussion was created
@@ -63,10 +63,10 @@ public class Discussion extends EntityDescriptor {
 	}
 	
 	@XmlElement(name="created_by")
-	public UserInfo getCreatedBy() {
+	public User getCreatedBy() {
 		return createdBy;
 	}
-	public void setCreatedBy(UserInfo createdBy) {
+	public void setCreatedBy(User createdBy) {
 		this.createdBy = createdBy;
 	}
 	

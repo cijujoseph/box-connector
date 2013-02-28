@@ -7,7 +7,7 @@
  */
 
 
-package org.mule.modules.boxnet.callback;
+package org.mule.modules.box.callback;
 
 import org.apache.log4j.Logger;
 import org.mule.api.transport.Connector;

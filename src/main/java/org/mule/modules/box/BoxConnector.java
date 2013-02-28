@@ -39,6 +39,7 @@ import org.mule.api.annotations.param.Optional;
 import org.mule.api.context.MuleContextAware;
 import org.mule.commons.jersey.JerseyUtil;
 import org.mule.construct.Flow;
+import org.mule.modules.box.callback.AuthCallbackAdapter;
 import org.mule.modules.box.jersey.AuthBuilderBehaviour;
 import org.mule.modules.box.jersey.BoxResponseHandler;
 import org.mule.modules.box.jersey.MediaTypesBuilderBehaviour;
@@ -63,7 +64,6 @@ import org.mule.modules.box.model.response.GetCollaborationsResponse;
 import org.mule.modules.box.model.response.GetCommentsResponse;
 import org.mule.modules.box.model.response.GetTicketResponse;
 import org.mule.modules.box.model.response.UploadFileResponse;
-import org.mule.modules.boxnet.callback.AuthCallbackAdapter;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;

@@ -30,7 +30,7 @@ public class Comment extends EntityDescriptor {
 	/**
 	 * Whether or not this comment is a reply to another comment
 	 */
-	private boolean isReplyComment;
+	private Boolean isReplyComment;
 	
 	/**
 	 * The comment text that the user typed
@@ -64,10 +64,10 @@ public class Comment extends EntityDescriptor {
 	private String modifiedAt;
 	
 	@XmlElement(name="is_reply_comment")
-	public boolean isReplyComment() {
+	public Boolean isReplyComment() {
 		return isReplyComment;
 	}
-	public void setReplyComment(boolean isReplyComment) {
+	public void setReplyComment(Boolean isReplyComment) {
 		this.isReplyComment = isReplyComment;
 	}
 	public String getMessage() {

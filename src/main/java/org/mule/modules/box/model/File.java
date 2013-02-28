@@ -79,17 +79,17 @@ public class File extends Item {
 	/**
 	 * The user who first created file
 	 */
-	private UserInfo createdBy;
+	private User createdBy;
 	
 	/**
 	 * The user who last updated this file
 	 */
-	private UserInfo modifiedBy;
+	private User modifiedBy;
 	
 	/**
 	 * The user who owns this file
 	 */
-	private UserInfo ownedBy;
+	private User ownedBy;
 	
 	/**
 	 * The folder this file is contained in
@@ -151,26 +151,26 @@ public class File extends Item {
 	}
 	
 	@XmlElement(name="created_by")
-	public UserInfo getCreatedBy() {
+	public User getCreatedBy() {
 		return createdBy;
 	}
-	public void setCreatedBy(UserInfo createdBy) {
+	public void setCreatedBy(User createdBy) {
 		this.createdBy = createdBy;
 	}
 	
 	@XmlElement(name="modified_by")
-	public UserInfo getModifiedBy() {
+	public User getModifiedBy() {
 		return modifiedBy;
 	}
-	public void setModifiedBy(UserInfo modifiedBy) {
+	public void setModifiedBy(User modifiedBy) {
 		this.modifiedBy = modifiedBy;
 	}
 	
 	@XmlElement(name="owned_by")
-	public UserInfo getOwnedBy() {
+	public User getOwnedBy() {
 		return ownedBy;
 	}
-	public void setOwnedBy(UserInfo ownedBy) {
+	public void setOwnedBy(User ownedBy) {
 		this.ownedBy = ownedBy;
 	}
 	

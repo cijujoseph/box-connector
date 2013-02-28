@@ -72,12 +72,12 @@ public class UpdateItemRequest implements Serializable {
 	/**
 	 * Whether this link allows downloads
 	 */
-	private boolean canDownload;
+	private Boolean canDownload;
 	
 	/**
 	 * Whether this link allows previews
 	 */
-	private boolean canPreview;
+	private Boolean canPreview;
 	
 	/**
 	 * The email-to-upload address for this folder
@@ -152,20 +152,20 @@ public class UpdateItemRequest implements Serializable {
 	}
 
 	@XmlAttribute(name="permissions.download")
-	public boolean isCanDownload() {
+	public Boolean isCanDownload() {
 		return canDownload;
 	}
 
 	@XmlAttribute(name="permissions.preview")
-	public void setCanDownload(boolean canDownload) {
+	public void setCanDownload(Boolean canDownload) {
 		this.canDownload = canDownload;
 	}
 
-	public boolean isCanPreview() {
+	public Boolean isCanPreview() {
 		return canPreview;
 	}
 
-	public void setCanPreview(boolean canPreview) {
+	public void setCanPreview(Boolean canPreview) {
 		this.canPreview = canPreview;
 	}
 

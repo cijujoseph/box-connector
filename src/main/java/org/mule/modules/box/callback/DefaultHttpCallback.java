@@ -6,7 +6,7 @@
  * LICENSE.md file.
  */
 
-package org.mule.modules.boxnet.callback;
+package org.mule.modules.box.callback;
 
 import java.util.ArrayList;
 import java.util.Arrays;
