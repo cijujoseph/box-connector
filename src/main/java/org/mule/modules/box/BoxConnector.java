@@ -641,9 +641,6 @@ public class BoxConnector implements MuleContextAware {
 	    						200, 201);
     }
     
-    
-    
-    
     /**
      * Retrieves the files and/or folders contained within this folder without any other metadata about the folder in the mini format is returned for each item by default.
      * Paginated results can be retrieved using the limit and offset parameters.
@@ -963,6 +960,40 @@ public class BoxConnector implements MuleContextAware {
 	    							.entity(request),
 	    						File.class,
 	    						200, 201);
+    }
+    
+    /**
+     * Used to create a shared link for this particular file.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:share-file}
+     * 
+     * @param fileId the id of the file you want to share
+     * @param sharedLink an instance of {@link org.mule.modules.box.model.SharedLink} with the information about the share
+     * @return an instance of {@link org.mule.modules.box.model.File} representing the shared folder
+     */
+    @Processor
+    public File shareFile(String fileId, @Optional @Default("#[payload]") SharedLink sharedLink) {
+    	CreateSharedLinkRequest request = new CreateSharedLinkRequest();
+    	request.setSharedLink(sharedLink);
+    	
+    	return this.jerseyUtil.put(this.apiResource.path("files")
+    								.path(fileId)
+	    							.entity(request),
+	    						File.class,
+	    						200, 201);
+    }
+    
+    /**
+     * Deletes the shared link associated to a file
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:unshare-file}
+     * 
+     * @param fileId the id of the file you want to unshare
+     * @return an instance of {@link org.mule.modules.box.model.File} representing the unshared folder
+     */
+    @Processor
+    public File unshareFile(String fileId) {
+    	return this.shareFile(fileId, null);
     }
     
 

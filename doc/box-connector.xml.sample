@@ -118,3 +118,9 @@
 <!-- BEGIN_INCLUDE(box:copy-file) -->
     <box:copy-file fileId="#[flowVars['fileId']]" />
 <!-- END_INCLUDE(box:copy-file) -->
+<!-- BEGIN_INCLUDE(box:share-file) -->
+    <box:share-file fileId="#[flowVars['fileID']]" />
+<!-- END_INCLUDE(box:share-file) -->
+<!-- BEGIN_INCLUDE(box:unshare-file) -->
+    <box:unshare-file fileId="#[flowVars['fileID']]" />
+<!-- END_INCLUDE(box:unshare-file) -->
