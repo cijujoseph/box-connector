@@ -43,6 +43,7 @@ import org.mule.modules.box.jersey.AuthBuilderBehaviour;
 import org.mule.modules.box.jersey.BoxResponseHandler;
 import org.mule.modules.box.jersey.MediaTypesBuilderBehaviour;
 import org.mule.modules.box.model.Comment;
+import org.mule.modules.box.model.Discussion;
 import org.mule.modules.box.model.Entries;
 import org.mule.modules.box.model.File;
 import org.mule.modules.box.model.Folder;
@@ -1146,6 +1147,78 @@ public class BoxConnector implements MuleContextAware {
     	this.jerseyUtil.delete(this.apiResource.path("comments").path(commentId), Comment.class, 200);
     }
     
+    /**
+     * Used to create the metadata for a new discussion for a particular folder.
+     * The parent, id and name attributes of the request object are required
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:create-discussion}
+     * 
+     * @param discussion the discussion object to be created
+     * @return an instance of {@link org.mule.modules.box.model.Discussion} with the metadata of the created discussion
+     */
+    @Processor
+    public Discussion createDiscussion(@Optional @Default("#[payload]") Discussion discussion) {
+    	return this.jerseyUtil.post(this.apiResource.path("discussions"), Discussion.class, 200, 201);
+    }
+    
+    /**
+     * Used to add a comment to a discussion.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:comment-discussion}
+     * 
+     * @param discussionId the id of the discussion to comment on
+     * @param message the text of the comment to be posted
+     * @return an instance of {@link org.mule.modules.box.model.Comment} representing the created message
+     */
+    @Processor
+    public Comment commentDiscussion(String discussionId, String message) {
+    	Map<String, String> entity = new HashMap<String, String>();
+    	entity.put("message", message);
+    	
+    	return this.jerseyUtil.post(this.apiResource.path("discussions").path(discussionId).path("comments"), Comment.class, 200, 201);
+    }
+    
+    /**
+     * Used to retrieve the metadata about a specific discussion.
+     * Information about the user who created the discussion is also included.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-discussion}
+     * 
+     * @param discussionId the id of the discussion you wnat
+     * @return an instance of {@link org.mule.modules.box.model.Discussion} with the discussion metadata
+     */
+    @Processor
+    public Discussion getDiscussion(String discussionId) {
+    	return this.jerseyUtil.get(this.apiResource.path("discussions").path(discussionId), Discussion.class, 200);
+    }
+    
+    /**
+     * Used to update the metadata for an existing discussion.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:update-discussion}
+     * 
+     * @param discussion discussion object carrying the new state
+     * @param discussionId the id of the discussion to be updated
+     * @return a new instance of {@link org.mule.modules.box.model.Discussion} carrying the updated state
+     */
+    @Processor
+    public Discussion updateDiscussion(@Optional @Default("#[payload]") Discussion discussion, String discussionId) {
+    	return this.jerseyUtil.put(this.apiResource.path("discussions").path(discussionId), Discussion.class, 200, 201);
+    }
+    
+    /**
+     * Used to retrieve all comments for a given discussion.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-discussion-comments}
+     * 
+     * @param discussionId the id of the discussions which comments you want
+     * @return an instance of {@link org.mule.modules.box.model.response.GetCommentsResponse}
+     */
+    @Processor
+    public GetCommentsResponse getDiscussionComments(String discussionId) {
+    	return this.jerseyUtil.get(this.apiResource.path("discussions").path(discussionId).path("comments"), GetCommentsResponse.class, 200);
+    	
+    }
 
     public String getAuthToken(MuleMessage message) {
     	String token = null;

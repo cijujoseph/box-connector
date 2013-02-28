@@ -151,3 +151,18 @@
 <!-- BEGIN_INCLUDE(box:delete-comment) -->
     <box:delete-comment commentId="#[flowVars['commentID']]" />
 <!-- END_INCLUDE(box:delete-comment) -->
+<!-- BEGIN_INCLUDE(box:create-discussion) -->
+    <box:create-discussion />
+<!-- END_INCLUDE(box:create-discussion) -->
+<!-- BEGIN_INCLUDE(box:comment-discussion) -->
+    <box:comment-discussion discussionId="#[flowVars['discId']]" message="Hello mule!" />
+<!-- END_INCLUDE(box:comment-discussion) -->
+<!-- BEGIN_INCLUDE(box:get-discussion) -->
+    <box:get-discussion discussionId="#[flowVars['discId']]" />
+<!-- END_INCLUDE(box:get-discussion) -->
+<!-- BEGIN_INCLUDE(box:get-discussion-comments) -->
+    <box:get-discussion-comments discussionId="#[flowVars['discId']]" />
+<!-- END_INCLUDE(box:get-discussion-comments) -->
+<!-- BEGIN_INCLUDE(box:update-discussion) -->
+    <box:update-discussion discussionId="#[flowVars['discId']]" />
+<!-- END_INCLUDE(box:update-discussion) -->
