@@ -124,3 +124,9 @@
 <!-- BEGIN_INCLUDE(box:unshare-file) -->
     <box:unshare-file fileId="#[flowVars['fileID']]" />
 <!-- END_INCLUDE(box:unshare-file) -->
+<!-- BEGIN_INCLUDE(box:get-file-comments) -->
+    <box:get-file-comments fileId="#[flowVars['fileID']]" />
+<!-- END_INCLUDE(box:get-file-comments) -->
+<!-- BEGIN_INCLUDE(box:get-file-thumbnail) -->
+    <box:get-file-thumbnail fileId="#[flowVars['fileID']]" minSize="px32x32" maxSize="px64x64"/>
+<!-- END_INCLUDE(box:get-file-thumbnail) -->

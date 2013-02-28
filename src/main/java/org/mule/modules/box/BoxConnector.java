@@ -45,6 +45,7 @@ import org.mule.modules.box.model.File;
 import org.mule.modules.box.model.Folder;
 import org.mule.modules.box.model.FolderItems;
 import org.mule.modules.box.model.SharedLink;
+import org.mule.modules.box.model.ThumbnailSize;
 import org.mule.modules.box.model.descriptor.FolderItem;
 import org.mule.modules.box.model.request.CopyItemRequest;
 import org.mule.modules.box.model.request.CreateFolderRequest;
@@ -53,6 +54,7 @@ import org.mule.modules.box.model.request.RestoreTrashedFolderRequest;
 import org.mule.modules.box.model.request.UpdateItemRequest;
 import org.mule.modules.box.model.response.FileVersionResponse;
 import org.mule.modules.box.model.response.GetAuthTokenResponse;
+import org.mule.modules.box.model.response.GetCommentsResponse;
 import org.mule.modules.box.model.response.GetTicketResponse;
 import org.mule.modules.box.model.response.UploadFileResponse;
 import org.mule.modules.boxnet.callback.AuthCallbackAdapter;
@@ -995,6 +997,47 @@ public class BoxConnector implements MuleContextAware {
     public File unshareFile(String fileId) {
     	return this.shareFile(fileId, null);
     }
+    
+    /**
+     * Retrieves the comments on a particular file, if any exist.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-file-comments}
+     * 
+     * @param fileId the id of the while which comments you want
+     * @return an instance of {@link org.mule.modules.box.model.response.GetCommentsResponse}
+     */
+    @Processor
+    public GetCommentsResponse getFileComments(String fileId) {
+    	return this.jerseyUtil.get(this.apiResource.path("files").path("comments"), GetCommentsResponse.class, 200);
+    }
+    
+    /**
+     * Retrieves a thumbnail, or smaller image representation, of this file.
+     * Sizes of 32x32, 64x64, 128x128, and 256x256 can be returned.
+     * Currently thumbnails are only available in .png format and will only be generated for image file formats.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-file-thumbnail}
+     * 
+     * @param fileId the id of the file which thumb you want
+     * @param minSize the minimum size you're interested in
+     * @param maxSize the maximum size you're interested in
+     * @return an InputStream with the content of the thumb. Remember to close it!
+     */
+    @Processor
+    public InputStream getFileThumbnail(String fileId, @Optional ThumbnailSize minSize, @Optional ThumbnailSize maxSize) {
+    	WebResource resource = this.apiResource.path("files").path(fileId).path("thumbnail.extension");
+    	
+    	if (minSize != null) {
+    		resource = minSize.setAsMin(resource);
+    	}
+    	
+    	if (maxSize != null) {
+    		resource = maxSize.setAsMax(resource);
+    	}
+    	
+    	return this.jerseyUtil.get(resource, InputStream.class, 200, 202);
+    }
+    
     
 
     public String getAuthToken(MuleMessage message) {
