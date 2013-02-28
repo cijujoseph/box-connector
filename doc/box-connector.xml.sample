@@ -130,3 +130,12 @@
 <!-- BEGIN_INCLUDE(box:get-file-thumbnail) -->
     <box:get-file-thumbnail fileId="#[flowVars['fileID']]" minSize="px32x32" maxSize="px64x64"/>
 <!-- END_INCLUDE(box:get-file-thumbnail) -->
+<!-- BEGIN_INCLUDE(box:get-trashed-file) -->
+    <box:get-trashed-file fileId="#[flowVars['fileId']]" />
+<!-- END_INCLUDE(box:get-trashed-file) -->
+<!-- BEGIN_INCLUDE(box:restore-trashed-file) -->
+    <box:restore-trashed-file fileId="#[flowVars['fileID']]" />
+<!-- END_INCLUDE(box:restore-trashed-file) -->
+<!-- BEGIN_INCLUDE(box:perm-delete-file) -->
+    <box:perm-delete-file fileId="#[flowVars['fileID']]" />
+<!-- END_INCLUDE(box:perm-delete-file) -->

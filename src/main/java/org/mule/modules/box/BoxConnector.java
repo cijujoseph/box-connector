@@ -50,7 +50,7 @@ import org.mule.modules.box.model.descriptor.FolderItem;
 import org.mule.modules.box.model.request.CopyItemRequest;
 import org.mule.modules.box.model.request.CreateFolderRequest;
 import org.mule.modules.box.model.request.CreateSharedLinkRequest;
-import org.mule.modules.box.model.request.RestoreTrashedFolderRequest;
+import org.mule.modules.box.model.request.RestoreTrashedItemRequest;
 import org.mule.modules.box.model.request.UpdateItemRequest;
 import org.mule.modules.box.model.response.FileVersionResponse;
 import org.mule.modules.box.model.response.GetAuthTokenResponse;
@@ -525,7 +525,7 @@ public class BoxConnector implements MuleContextAware {
     }
     
     /**
-     * Get the Items in the Trash. Retrieves the files and/or folders that have been moved to the trash using the mini format.
+     * Get the folders in the Trash. Retrieves the files and/or folders that have been moved to the trash using the mini format.
      * Paginated results can be retrieved using the limit and offset parameters.
 
      * {@sample.xml ../../../doc/box-connector.xml.sample box:get-trashed-items}
@@ -547,11 +547,11 @@ public class BoxConnector implements MuleContextAware {
      * {@sample.xml ../../../doc/box-connector.xml.sample box:restore-trashed-folder}
      * 
      * @param folderId the id of the trashed folder being restored
-     * @param request an instance of {@link org.mule.modules.box.model.request.RestoreTrashedFolderRequest} with the request parameters
+     * @param request an instance of {@link org.mule.modules.box.model.request.RestoreTrashedItemRequest} with the request parameters
      * @return an instance of {@link org.mule.modules.box.model.Folder} with the restored folder new state
      */
     @Processor
-    public Folder restoreTrashedFolder(String folderId, @Optional @Default("#[payload]") RestoreTrashedFolderRequest request) {
+    public Folder restoreTrashedFolder(String folderId, @Optional @Default("#[payload]") RestoreTrashedItemRequest request) {
     	return this.jerseyUtil.post(this.apiResource
 	    								.path("folders")
 	    								.path(folderId)
@@ -1038,7 +1038,51 @@ public class BoxConnector implements MuleContextAware {
     	return this.jerseyUtil.get(resource, InputStream.class, 200, 202);
     }
     
+    /**
+     * Retrieves the metadata of a trashed file
+
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-trashed-file}
+     * 
+     * @param fileId the id of the trashed file you want
+     * @return an instance of {@link org.mule.modules.box.model.File}
+     */
+    @Processor
+    public File getTrashedFile(String fileId) {
+    	return this.jerseyUtil.get(this.apiResource.path("files").path(fileId).path("trash"), File.class, 200);
+    }
     
+    /**
+     * Restores a file that has been moved to the trash. Default behavior is to restore the item to the folder it was in before it was moved to the trash.
+     * If that parent folder no longer exists or if there is now an item with the same name in that parent folder,
+     * the new parent folder and/or new name will need to be included in the request.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:restore-trashed-file}
+     * 
+     * @param fileId the id of the trashed file being restored
+     * @param request an instance of {@link org.mule.modules.box.model.request.RestoreTrashedItemRequest} with the request parameters
+     * @return an instance of {@link org.mule.modules.box.model.Folder} with the restored folder new state
+     */
+    @Processor
+    public File restoreTrashedFile(String fileId, @Optional @Default("#[payload]") RestoreTrashedItemRequest request) {
+    	return this.jerseyUtil.post(this.apiResource
+	    								.path("files")
+	    								.path(fileId)
+	    								.entity(request)
+    								, File.class
+    								, 201);
+    }
+    
+    /**
+     * Permanently deletes an item that is in the trash. The item will no longer exist in Box. This action cannot be undone.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:perm-delete-file}
+     * 
+     * @param fileId the id of the file to be permanently deleted
+     */
+    @Processor
+    public void permDeleteFile(String fileId) {
+    	this.jerseyUtil.delete(this.apiResource.path("files").path(fileId).path("trash"), String.class, 204);
+    }
 
     public String getAuthToken(MuleMessage message) {
     	String token = null;

@@ -15,11 +15,11 @@ import javax.xml.bind.annotation.XmlAttribute;
 import org.mule.modules.box.model.descriptor.FolderItem;
 
 /**
- * Request object for restoring folders from the trash
+ * Request object for restoring items from the trash
  *
  * @author mariano.gonzalez@mulesoft.com
  */
-public class RestoreTrashedFolderRequest implements Serializable {
+public class RestoreTrashedItemRequest implements Serializable {
 	
 	private static final long serialVersionUID = 94008240835040493L;
 	
