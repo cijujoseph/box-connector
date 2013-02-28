@@ -10,7 +10,7 @@ package org.mule.modules.box.model.request;
 
 import java.io.Serializable;
 
-import org.mule.modules.box.model.descriptor.FolderItem;
+import org.mule.modules.box.model.Item;
 
 /**
  * 
@@ -24,7 +24,7 @@ public class CopyItemRequest implements Serializable {
 	/**
 	 * Folder object representing the new location of the item
 	 */
-	private FolderItem parent;
+	private Item parent;
 	
 	/**
 	 * The ID of the destination folder
@@ -36,11 +36,11 @@ public class CopyItemRequest implements Serializable {
 	 */
 	private String name;
 
-	public FolderItem getParent() {
+	public Item getParent() {
 		return parent;
 	}
 
-	public void setParent(FolderItem parent) {
+	public void setParent(Item parent) {
 		this.parent = parent;
 	}
 

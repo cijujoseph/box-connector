@@ -12,7 +12,7 @@ import java.io.Serializable;
 
 import javax.xml.bind.annotation.XmlAttribute;
 
-import org.mule.modules.box.model.descriptor.FolderItem;
+import org.mule.modules.box.model.Item;
 
 /**
  * Request object for restoring items from the trash
@@ -26,7 +26,7 @@ public class RestoreTrashedItemRequest implements Serializable {
 	/**
 	 *  The new parent folder for this item
 	 */
-	private FolderItem parent;
+	private Item parent;
 	
 	/**
 	 *  The id of the new parent folder
@@ -38,10 +38,10 @@ public class RestoreTrashedItemRequest implements Serializable {
 	 */
 	private String newName;
 	
-	public FolderItem getParent() {
+	public Item getParent() {
 		return parent;
 	}
-	public void setParent(FolderItem parent) {
+	public void setParent(Item parent) {
 		this.parent = parent;
 	}
 	

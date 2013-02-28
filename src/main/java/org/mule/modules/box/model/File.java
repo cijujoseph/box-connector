@@ -11,8 +11,6 @@ package org.mule.modules.box.model;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.descriptor.EntityDescriptor;
-import org.mule.modules.box.model.descriptor.FolderItem;
 
 /**
  * File objects represent that metadata about individual files in Box, with attributes describing who created the file,
@@ -22,7 +20,7 @@ import org.mule.modules.box.model.descriptor.FolderItem;
  * @author mariano.gonzalez@mulesoft.com
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class File extends EntityDescriptor {
+public class File extends Item {
 	
 	private static final long serialVersionUID = 6127755562219178478L;
 	
@@ -67,11 +65,6 @@ public class File extends EntityDescriptor {
 	private String contentModifiedAt;
 	
 	/**
-	 * The sha1 hash of this file
-	 */
-	private String sha1;
-	
-	/**
 	 * The path of folders to this item, starting at the root
 	 */
 	private Entries paths;
@@ -101,7 +94,7 @@ public class File extends EntityDescriptor {
 	/**
 	 * The folder this file is contained in
 	 */
-	private FolderItem parent;
+	private Item parent;
 	
 	
 	
@@ -181,17 +174,11 @@ public class File extends EntityDescriptor {
 		this.ownedBy = ownedBy;
 	}
 	
-	public FolderItem getParent() {
+	public Item getParent() {
 		return parent;
 	}
-	public void setParent(FolderItem parent) {
+	public void setParent(Item parent) {
 		this.parent = parent;
-	}
-	public String getSha1() {
-		return sha1;
-	}
-	public void setSha1(String sha1) {
-		this.sha1 = sha1;
 	}
 	@XmlElement(name="item_status")
 	public String getItemStatus() {

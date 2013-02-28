@@ -166,3 +166,18 @@
 <!-- BEGIN_INCLUDE(box:update-discussion) -->
     <box:update-discussion discussionId="#[flowVars['discId']]" />
 <!-- END_INCLUDE(box:update-discussion) -->
+<!-- BEGIN_INCLUDE(box:create-collaboration) -->
+    <box:create-collaboration />
+<!-- END_INCLUDE(box:create-collaboration) -->
+<!-- BEGIN_INCLUDE(box:update-collaboration) -->
+    <box:update-collaboration collaborationId="#[flowVars['collabId']]" />
+<!-- END_INCLUDE(box:update-collaboration) -->
+<!-- BEGIN_INCLUDE(box:delete-collaboration) -->
+    <box:delete-collaboration collaborationId="#[flowVars['collabId']]" />
+<!-- END_INCLUDE(box:delete-collaboration) -->
+<!-- BEGIN_INCLUDE(box:get-collaboration) -->
+    <box:get-collaboration collaborationId="#[flowVars['collabId']]" />
+<!-- END_INCLUDE(box:get-collaboration) -->
+<!-- BEGIN_INCLUDE(box:get-pending-collaborations) -->
+    <box:get-pending-collaborations />
+<!-- END_INCLUDE(box:get-pending-collaborations) -->

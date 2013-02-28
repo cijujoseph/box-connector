@@ -42,15 +42,16 @@ import org.mule.construct.Flow;
 import org.mule.modules.box.jersey.AuthBuilderBehaviour;
 import org.mule.modules.box.jersey.BoxResponseHandler;
 import org.mule.modules.box.jersey.MediaTypesBuilderBehaviour;
+import org.mule.modules.box.model.Collaboration;
 import org.mule.modules.box.model.Comment;
 import org.mule.modules.box.model.Discussion;
 import org.mule.modules.box.model.Entries;
 import org.mule.modules.box.model.File;
 import org.mule.modules.box.model.Folder;
-import org.mule.modules.box.model.FolderItems;
+import org.mule.modules.box.model.GetItemsResponse;
+import org.mule.modules.box.model.Item;
 import org.mule.modules.box.model.SharedLink;
 import org.mule.modules.box.model.ThumbnailSize;
-import org.mule.modules.box.model.descriptor.FolderItem;
 import org.mule.modules.box.model.request.CopyItemRequest;
 import org.mule.modules.box.model.request.CreateFolderRequest;
 import org.mule.modules.box.model.request.CreateSharedLinkRequest;
@@ -58,6 +59,7 @@ import org.mule.modules.box.model.request.RestoreTrashedItemRequest;
 import org.mule.modules.box.model.request.UpdateItemRequest;
 import org.mule.modules.box.model.response.FileVersionResponse;
 import org.mule.modules.box.model.response.GetAuthTokenResponse;
+import org.mule.modules.box.model.response.GetCollaborationsResponse;
 import org.mule.modules.box.model.response.GetCommentsResponse;
 import org.mule.modules.box.model.response.GetTicketResponse;
 import org.mule.modules.box.model.response.UploadFileResponse;
@@ -536,10 +538,10 @@ public class BoxConnector implements MuleContextAware {
      * 
      * @param limit the maximum amount of items to be returned (default=100, max=1000)
      * @param offset pagination offset (default=0)
-     * @return an instance of {@link org.mule.modules.box.model.FolderItems}
+     * @return an instance of {@link org.mule.modules.box.model.GetItemsResponse}
      */
     @Processor
-    public FolderItems getTrashedItems(@Optional @Default("100") Long limit, @Optional @Default("0") Long offset) {
+    public GetItemsResponse getTrashedItems(@Optional @Default("100") Long limit, @Optional @Default("0") Long offset) {
     	return this.getFolderItems("trash", limit, offset);
     }
     
@@ -634,7 +636,7 @@ public class BoxConnector implements MuleContextAware {
      */
     @Processor
     public Folder copyFolder(@Optional @Default("0") String targetFolderId, String folderId) {
-    	FolderItem parent = new FolderItem();
+    	Item parent = new Item();
     	parent.setId(targetFolderId);
     	CopyItemRequest request = new CopyItemRequest();
     	request.setParent(parent);
@@ -656,10 +658,10 @@ public class BoxConnector implements MuleContextAware {
      * @param folderId the id of the folder you want to inspect. If not provided then the root folder is assumed
      * @param limit the maximum amount of items to be returned (default=100, max=1000)
      * @param offset pagination offset (default=0)
-     * @return an instance of {@link org.mule.modules.box.model.FolderItems}
+     * @return an instance of {@link org.mule.modules.box.model.GetItemsResponse}
      */
     @Processor
-    public FolderItems getFolderItems(
+    public GetItemsResponse getFolderItems(
     					@Optional @Default("0") String folderId,
     					@Optional @Default("100") Long limit,
     					@Optional @Default("0") Long offset) {
@@ -676,7 +678,7 @@ public class BoxConnector implements MuleContextAware {
     		resource = resource.queryParam("limit", limit.toString());
     	}
     	
-    	return this.jerseyUtil.get(resource, FolderItems.class, 200);
+    	return this.jerseyUtil.get(resource, GetItemsResponse.class, 200);
     }
     
     /**
@@ -686,13 +688,13 @@ public class BoxConnector implements MuleContextAware {
      * 
      * @param folderId the id of the folder you want to inspect. If not provided then the root folder is assumed
      * @param resourceName the name you want to test
-     * @return an instance of {@link org.mule.modules.box.model.descriptor.FolderItem} with that about the found item. {@code null} if the item is not found
+     * @return an instance of {@link org.mule.modules.box.model.Item} with that about the found item. {@code null} if the item is not found
      */
     @Processor
-    public FolderItem getFolderItem(@Optional @Default("0") String folderId, String resourceName) {
-    	FolderItems items = this.getFolderItems(folderId, null, null);
+    public Item getFolderItem(@Optional @Default("0") String folderId, String resourceName) {
+    	GetItemsResponse items = this.getFolderItems(folderId, null, null);
     	
-    	for (FolderItem item : items.getEntries()) {
+    	for (Item item : items.getEntries()) {
     		if (resourceName.equals(item.getName())) {
     			return item;
     		}
@@ -955,7 +957,7 @@ public class BoxConnector implements MuleContextAware {
      */
     @Processor
     public File copyFile(@Optional @Default("0") String targetFolderId, String fileId) {
-    	FolderItem parent = new FolderItem();
+    	Item parent = new Item();
     	parent.setId(targetFolderId);
     	CopyItemRequest request = new CopyItemRequest();
     	request.setParent(parent);
@@ -1115,7 +1117,12 @@ public class BoxConnector implements MuleContextAware {
     	Map<String, String> entity = new HashMap<String, String>();
     	entity.put("message", message);
     	
-    	return this.jerseyUtil.post(this.apiResource.path("files").path(fileId).path("comments"), Comment.class, 200, 201);
+    	return this.jerseyUtil.post(this.apiResource
+    										.path("files")
+    										.path(fileId)
+    										.path("comments")
+    										.entity(entity)
+    									, Comment.class, 200, 201);
     }
     
     /**
@@ -1132,7 +1139,11 @@ public class BoxConnector implements MuleContextAware {
     	Map<String, String> entity = new HashMap<String, String>();
     	entity.put("message", newMessage);
     	
-    	return this.jerseyUtil.put(this.apiResource.path("comments").path(commentId), Comment.class, 200, 201);
+    	return this.jerseyUtil.put(this.apiResource
+    									.path("comments")
+    									.path(commentId)
+    									.entity(entity)
+    								, Comment.class, 200, 201);
     }
     
     /**
@@ -1158,7 +1169,10 @@ public class BoxConnector implements MuleContextAware {
      */
     @Processor
     public Discussion createDiscussion(@Optional @Default("#[payload]") Discussion discussion) {
-    	return this.jerseyUtil.post(this.apiResource.path("discussions"), Discussion.class, 200, 201);
+    	return this.jerseyUtil.post(this.apiResource
+    									.path("discussions")
+    									.entity(discussion)
+    								, Discussion.class, 200, 201);
     }
     
     /**
@@ -1175,7 +1189,12 @@ public class BoxConnector implements MuleContextAware {
     	Map<String, String> entity = new HashMap<String, String>();
     	entity.put("message", message);
     	
-    	return this.jerseyUtil.post(this.apiResource.path("discussions").path(discussionId).path("comments"), Comment.class, 200, 201);
+    	return this.jerseyUtil.post(this.apiResource
+    					.path("discussions")
+    					.path(discussionId)
+    					.path("comments")
+    					.entity(entity),
+    				Comment.class, 200, 201);
     }
     
     /**
@@ -1203,7 +1222,10 @@ public class BoxConnector implements MuleContextAware {
      */
     @Processor
     public Discussion updateDiscussion(@Optional @Default("#[payload]") Discussion discussion, String discussionId) {
-    	return this.jerseyUtil.put(this.apiResource.path("discussions").path(discussionId), Discussion.class, 200, 201);
+    	return this.jerseyUtil.put(this.apiResource.path("discussions")
+    							.path(discussionId)
+    							.entity(discussion)
+    						, Discussion.class, 200, 201);
     }
     
     /**
@@ -1216,9 +1238,121 @@ public class BoxConnector implements MuleContextAware {
      */
     @Processor
     public GetCommentsResponse getDiscussionComments(String discussionId) {
-    	return this.jerseyUtil.get(this.apiResource.path("discussions").path(discussionId).path("comments"), GetCommentsResponse.class, 200);
-    	
+    	return this.jerseyUtil.get(this.apiResource
+    										.path("discussions")
+    										.path(discussionId)
+    										.path("comments")
+    							, GetCommentsResponse.class, 200);
     }
+    
+    /**
+     * Used to add a collaboration for a single user to a folder.
+     * Either an email address or a user ID can be used to create the collaboration.
+     * 
+     * Transferring ownership: To transfer ownership of a folder (as the current owner of the folder),
+     * first create a collaboration for the new user with any role.
+     * Then update that collaboration with a role of ‘owner’.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:create-collaboration}
+     * 
+     * @param collaboration object representing the collaboration to be created
+     * @return a new instance of {@link org.mule.modules.box.model.Collaboration} with the state of the newly created collab
+     */
+    @Processor
+    public Collaboration createCollaboration(@Optional @Default("#[payload]") Collaboration collaboration) {
+    	return this.jerseyUtil.post(this.apiResource
+    							.path("collaborations")
+    							.entity(collaboration),
+    						Collaboration.class, 200, 201);
+    }
+    
+    /**
+     * Used to update  an existing collaboration. 
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:update-collaboration}
+     * 
+     * @param collaboration object holding the new state for the collaboration
+     * @param collaborationId the id of the collaboration to be updated
+     * @return a new instance of {@link org.mule.modules.box.model.Collaboration} with the state of the collab
+     */
+    @Processor
+    public Collaboration updateCollaboration(@Optional @Default("#[payload]") Collaboration collaboration, String collaborationId) {
+    	return this.jerseyUtil.put(this.apiResource
+								.path("collaborations")
+								.path(collaborationId)
+								.entity(collaboration),
+							Collaboration.class, 200, 201);
+    }
+    
+    /**
+     * Used to delete a single collaboration.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:delete-collaboration}
+     * 
+     * @param collaborationId the id of the collaboration to be deleted
+     */
+    @Processor
+    public void deleteCollaboration(String collaborationId) {
+    	this.jerseyUtil.delete(this.apiResource
+    									.path("collaborations")
+    									.path(collaborationId)
+    						, String.class, 200);
+    }
+    
+    /**
+     * Used to get information about a single collaboration.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-collaboration}
+     * 
+     * @param collaborationId the id of the collaboration you want
+     * @return an instance of {@link org.mule.modules.box.model.Collaboration}
+     */
+    @Processor
+    public Collaboration getCollaboration(String collaborationId) {
+    	return this.jerseyUtil.get(this.apiResource
+    									.path("collaborations")
+    									.path(collaborationId)
+    								, Collaboration.class, 200);
+    }
+    
+    /**
+     * Used to retrieve all pending collaboration invites for this user.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-collaboration}
+     * 
+     * @return an instance of {@link org.mule.modules.box.model.response.GetCollaborationsResponse}
+     */
+    @Processor
+    public GetCollaborationsResponse getPendingCollaborations() {
+    	return this.jerseyUtil.get(this.apiResource
+    									.path("collaborations")
+    									.queryParam("status", "pending")
+    							, GetCollaborationsResponse.class, 200);
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     public String getAuthToken(MuleMessage message) {
     	String token = null;

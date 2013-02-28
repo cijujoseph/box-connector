@@ -6,9 +6,10 @@
  * LICENSE.md file.
  */
 
-package org.mule.modules.box.model.descriptor;
+package org.mule.modules.box.model;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
+import org.mule.modules.box.model.descriptor.EntityDescriptor;
 
 /**
  * 
@@ -16,19 +17,14 @@ import org.codehaus.jackson.annotate.JsonIgnoreProperties;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class FolderItem extends EntityDescriptor {
+public class Item extends EntityDescriptor {
 
 	private static final long serialVersionUID = 3406333075012024404L;
 	
+	/**
+	 * The sha1 hash of this item
+	 */
 	private String sha1;
-	
-	public boolean isFolder() {
-		return "folder".equals(this.getType());
-	}
-	
-	public boolean isFile() {
-		return "file".equals(this.getType());
-	}
 	
 	public String getSha1() {
 		return sha1;

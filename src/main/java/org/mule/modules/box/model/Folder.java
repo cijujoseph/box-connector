@@ -12,8 +12,6 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.descriptor.EntityDescriptor;
-import org.mule.modules.box.model.descriptor.FolderItem;
 import org.mule.modules.box.model.descriptor.UserDescriptor;
 
 /**
@@ -25,7 +23,7 @@ import org.mule.modules.box.model.descriptor.UserDescriptor;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class Folder extends EntityDescriptor {
+public class Folder extends Item {
 
 	private static final long serialVersionUID = -4254960125347133726L;
 	
@@ -82,12 +80,12 @@ public class Folder extends EntityDescriptor {
 	/**
 	 * The folder that contains this one
 	 */
-	private FolderItem parent;
+	private Item parent;
 	
 	/**
 	 * Descriptors for folders and files contained in this folder
 	 */
-	private FolderItems items;
+	private GetItemsResponse items;
 	
 	/**
 	 * Whether this folder will be synced by the Box sync clients or not
@@ -162,19 +160,19 @@ public class Folder extends EntityDescriptor {
 	public void setOwnedBy(UserDescriptor ownedBy) {
 		this.ownedBy = ownedBy;
 	}
-	public FolderItem getParent() {
+	public Item getParent() {
 		return parent;
 	}
-	public void setParent(FolderItem parent) {
+	public void setParent(Item parent) {
 		this.parent = parent;
 	}
 	
 	@XmlElement(name="item_collection")
-	public FolderItems getItems() {
+	public GetItemsResponse getItems() {
 		return items;
 	}
 	
-	public void setItems(FolderItems items) {
+	public void setItems(GetItemsResponse items) {
 		this.items = items;
 	}
 	@XmlElement(name="item_status")

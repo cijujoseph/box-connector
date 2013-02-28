@@ -15,9 +15,9 @@ import javax.xml.bind.annotation.XmlAttribute;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.mule.modules.box.model.Access;
 import org.mule.modules.box.model.FolderUploadEmail;
+import org.mule.modules.box.model.Item;
 import org.mule.modules.box.model.Permissions;
 import org.mule.modules.box.model.SharedLink;
-import org.mule.modules.box.model.descriptor.FolderItem;
 
 /**
  * 
@@ -42,7 +42,7 @@ public class UpdateItemRequest implements Serializable {
 	/**
 	 * 	The parent folder of this file
 	 */
-	private FolderItem parent;
+	private Item parent;
 	
 	/**
 	 * The ID of the parent folder
@@ -100,11 +100,11 @@ public class UpdateItemRequest implements Serializable {
 		this.description = description;
 	}
 
-	public FolderItem getParent() {
+	public Item getParent() {
 		return parent;
 	}
 
-	public void setParent(FolderItem parent) {
+	public void setParent(Item parent) {
 		this.parent = parent;
 	}
 

@@ -12,7 +12,6 @@ import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.mule.modules.box.model.descriptor.EntityDescriptor;
-import org.mule.modules.box.model.descriptor.FolderItem;
 
 /**
  * Discussions are sets of comments related to a single folder.
@@ -28,7 +27,7 @@ public class Discussion extends EntityDescriptor {
 	/**
 	 * The folder this discussion is related to
 	 */
-	private FolderItem parent;
+	private Item parent;
 	
 	/**
 	 * The description of this discussion. 1024 chars max
@@ -50,10 +49,10 @@ public class Discussion extends EntityDescriptor {
 	 */
 	private String modifiedAt;
 	
-	public FolderItem getParent() {
+	public Item getParent() {
 		return parent;
 	}
-	public void setParent(FolderItem parent) {
+	public void setParent(Item parent) {
 		this.parent = parent;
 	}
 	public String getDescription() {

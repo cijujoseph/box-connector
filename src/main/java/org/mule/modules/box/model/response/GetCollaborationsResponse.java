@@ -6,7 +6,7 @@
  * LICENSE.md file.
  */
 
-package org.mule.modules.box.model;
+package org.mule.modules.box.model.response;
 
 import java.io.Serializable;
 import java.util.List;
@@ -14,7 +14,7 @@ import java.util.List;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.descriptor.FolderItem;
+import org.mule.modules.box.model.Collaboration;
 
 /**
  * 
@@ -22,14 +22,12 @@ import org.mule.modules.box.model.descriptor.FolderItem;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class FolderItems implements Serializable {
+public class GetCollaborationsResponse implements Serializable {
 	
-	private static final long serialVersionUID = -4335709092350643546L;
+	private static final long serialVersionUID = 6957912698510817233L;
 	
 	private int totalCount;
-	private List<FolderItem> entries;
-	private int offset;
-	private int limit;
+	private List<Collaboration> entries;
 	
 	@XmlElement(name="total_count")
 	public int getTotalCount() {
@@ -38,22 +36,11 @@ public class FolderItems implements Serializable {
 	public void setTotalCount(int totalCount) {
 		this.totalCount = totalCount;
 	}
-	public List<FolderItem> getEntries() {
+	public List<Collaboration> getEntries() {
 		return entries;
 	}
-	public void setEntries(List<FolderItem> entries) {
+	public void setEntries(List<Collaboration> entries) {
 		this.entries = entries;
 	}
-	public int getOffset() {
-		return offset;
-	}
-	public void setOffset(int offset) {
-		this.offset = offset;
-	}
-	public int getLimit() {
-		return limit;
-	}
-	public void setLimit(int limit) {
-		this.limit = limit;
-	}
+
 }

@@ -12,7 +12,6 @@ import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.mule.modules.box.model.descriptor.EntityDescriptor;
-import org.mule.modules.box.model.descriptor.FolderItem;
 import org.mule.modules.box.model.descriptor.UserDescriptor;
 
 /**
@@ -57,7 +56,7 @@ public class Comment extends EntityDescriptor {
 	/**
 	 * The object this comment was placed on
 	 */
-	private FolderItem item;
+	private Item item;
 	
 	/**
 	 * The time this comment was last modified
@@ -93,10 +92,10 @@ public class Comment extends EntityDescriptor {
 	public void setCreatedAt(String createdAt) {
 		this.createdAt = createdAt;
 	}
-	public FolderItem getItem() {
+	public Item getItem() {
 		return item;
 	}
-	public void setItem(FolderItem item) {
+	public void setItem(Item item) {
 		this.item = item;
 	}
 	

@@ -21,7 +21,7 @@ import org.mule.api.MuleMessage;
 import org.mule.construct.Flow;
 import org.mule.modules.box.model.File;
 import org.mule.modules.box.model.Folder;
-import org.mule.modules.box.model.FolderItems;
+import org.mule.modules.box.model.GetItemsResponse;
 import org.mule.tck.junit4.FunctionalTestCase;
 
 /**
@@ -80,13 +80,13 @@ public class BoxConnectorTest extends FunctionalTestCase {
 	
 	@Test
 	public void listFolder() throws Exception {
-		FolderItems items = (FolderItems) this.callFlow("", "testListFolder").getPayload();
+		GetItemsResponse items = (GetItemsResponse) this.callFlow("", "testListFolder").getPayload();
 		Assert.assertTrue(items.getTotalCount() > 0);
 	}
 	
 	@Test
 	public void trashed() throws Exception {
-		FolderItems items = (FolderItems) this.callFlow("", "testTrashed").getPayload();
+		GetItemsResponse items = (GetItemsResponse) this.callFlow("", "testTrashed").getPayload();
 		Assert.assertFalse(items.getEntries().isEmpty());
 	}
 	
