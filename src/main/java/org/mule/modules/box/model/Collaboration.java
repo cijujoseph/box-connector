@@ -24,7 +24,7 @@ public class Collaboration extends EntityDescriptor {
 	
 	private static final long serialVersionUID = -9160092964332743659L;
 	
-	public static enum Status {
+	public static enum CollaborationStatus {
 		accepted,
 		pending,
 		rejected
@@ -53,7 +53,7 @@ public class Collaboration extends EntityDescriptor {
 	/**
 	 * The status of this collab
 	 */
-	private Status status;
+	private CollaborationStatus status;
 	
 	/**
 	 * The user who the collaboration applies to
@@ -106,10 +106,10 @@ public class Collaboration extends EntityDescriptor {
 	public void setExpiresAt(String expiresAt) {
 		this.expiresAt = expiresAt;
 	}
-	public Status getStatus() {
+	public CollaborationStatus getStatus() {
 		return status;
 	}
-	public void setStatus(Status status) {
+	public void setStatus(CollaborationStatus status) {
 		this.status = status;
 	}
 	

@@ -46,6 +46,7 @@ import org.mule.modules.box.jersey.MediaTypesBuilderBehaviour;
 import org.mule.modules.box.model.Collaboration;
 import org.mule.modules.box.model.Comment;
 import org.mule.modules.box.model.Discussion;
+import org.mule.modules.box.model.EmailAlias;
 import org.mule.modules.box.model.Entries;
 import org.mule.modules.box.model.File;
 import org.mule.modules.box.model.Folder;
@@ -53,6 +54,7 @@ import org.mule.modules.box.model.GetItemsResponse;
 import org.mule.modules.box.model.Item;
 import org.mule.modules.box.model.SharedLink;
 import org.mule.modules.box.model.ThumbnailSize;
+import org.mule.modules.box.model.User;
 import org.mule.modules.box.model.request.CopyItemRequest;
 import org.mule.modules.box.model.request.CreateFolderRequest;
 import org.mule.modules.box.model.request.CreateSharedLinkRequest;
@@ -62,7 +64,9 @@ import org.mule.modules.box.model.response.FileVersionResponse;
 import org.mule.modules.box.model.response.GetAuthTokenResponse;
 import org.mule.modules.box.model.response.GetCollaborationsResponse;
 import org.mule.modules.box.model.response.GetCommentsResponse;
+import org.mule.modules.box.model.response.GetEmailAliasResponse;
 import org.mule.modules.box.model.response.GetTicketResponse;
+import org.mule.modules.box.model.response.GetUsersResponse;
 import org.mule.modules.box.model.response.UploadFileResponse;
 
 import com.sun.jersey.api.client.Client;
@@ -1155,7 +1159,7 @@ public class BoxConnector implements MuleContextAware {
      */
     @Processor
     public void deleteComment(String commentId) {
-    	this.jerseyUtil.delete(this.apiResource.path("comments").path(commentId), Comment.class, 200);
+    	this.jerseyUtil.delete(this.apiResource.path("comments").path(commentId), Comment.class, 200, 204);
     }
     
     /**
@@ -1296,7 +1300,7 @@ public class BoxConnector implements MuleContextAware {
     	this.jerseyUtil.delete(this.apiResource
     									.path("collaborations")
     									.path(collaborationId)
-    						, String.class, 200);
+    						, String.class, 200, 204);
     }
     
     /**
@@ -1330,24 +1334,222 @@ public class BoxConnector implements MuleContextAware {
     							, GetCollaborationsResponse.class, 200);
     }
     
+    /**
+     * Retrieves information about the user who is currently logged in
+     * i.e. the user for whom this auth token was generated.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-user}
+     * 
+     * @return an instance of {@link org.mule.modules.box.model.User}
+     */
+    @Processor
+    public User getUser() {
+    	return this.jerseyUtil.get(this.apiResource.path("users/me"), User.class, 200);
+    }
     
+    /**
+     * Returns a list of all users for the Enterprise
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-users}
+     * 
+     * @param filterTerm A string used to filter the results to only users starting with the filter_term in either the name or the login
+     * @param limit The number of records to return.
+     * @param offset The record at which to start
+     * @return an instance of {@link org.mule.modules.box.model.response.GetUsersResponse}
+     */
+    @Processor
+    public GetUsersResponse getUsers(@Optional String filterTerm, @Optional Long limit, @Optional Long offset) {
+    	WebResource resource = this.apiResource.path("users");
+    	
+    	if (filterTerm != null) {
+    		resource = resource.queryParam("filter_term", filterTerm);
+    	}
+    	
+    	if (limit != null) {
+    		resource = resource.queryParam("limit", limit.toString());
+    	}
+    	
+    	if (offset != null) {
+    		resource = resource.queryParam("offset", offset.toString());
+    	}
+    	
+    	return this.jerseyUtil.get(this.apiResource.path("users"), GetUsersResponse.class, 200);
+    }
     
+    /**
+     * Used to edit the settings and information about a user.
+     * This method only works for enterprise admins.
+     * To roll a user out of the enterprise (and convert them to a standalone free user),
+     * update the special enterprise attribute to be null
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:update-user}
+     * 
+     * @param userId the id of the user you want to update
+     * @param user the user object with the updated state
+     * @param notify Whether the user should receive an email when they are rolled out of an enterprise
+     * @return an instance of {@link org.mule.modules.box.model.User} with the updated user state
+     */
+    @Processor
+    public User updateUser(
+    			String userId,
+    			@Optional @Default("#[payload]") User user,
+    			@Optional @Default("true") Boolean notify) {
+    	
+    	return this.jerseyUtil.put(this.apiResource
+    									.path("users")
+    									.path(userId)
+    									.queryParam("notify", notify.toString())
+    									.entity(user)
+    									, User.class, 200);
+    }
     
+    /**
+     * Used to provision a new user in an enterprise. This method only works for enterprise admins.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:create-user}
+     * 
+     * @param user an instance of {@link org.mule.modules.box.model.User} representing the user to be created
+     * @return a new instance of {@link org.mule.modules.box.model.User} with the final state of the created object
+     */
+    @Processor
+    public User createUser(@Optional @Default("#[payload]") User user) {
+    	return this.jerseyUtil.post(this.apiResource.path("users").entity(user), User.class, 200, 201);
+    }
     
+    /**
+     * Moves all of the content from within one user’s folder into a new folder in another user’s account.
+     * You can move folders across users as long as the you have administrative permissions.
+     * To move everything from the root folder, use 0 (zero) which always represents the root folder of a Box account
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:move-folder-to-user}
+     * 
+     * @param targetUser an instance of {@link org.mule.modules.box.model.User} representing the user that will receive the folder
+     * @param folderId the id of the folder to be moved
+     * @param notify Determines if the destination user should receive email notification of the transfer.
+     * @return an instance of {@link org.mule.modules.box.model.Folder} representing the moved folder 
+     */
+    @Processor
+    public Folder moveFolderToUser(
+    			@Optional @Default("#[paylaod]") User targetUser,
+    			@Optional @Default("0") String folderId,
+    			@Optional @Default("true") Boolean notify) {
+    	
+    	Map<String, Object> entity = new HashMap<String, Object>();
+    	entity.put("owned_by", targetUser);
+    	entity.put("id", targetUser.getId());
+    	
+    	return this.jerseyUtil.put(this.apiResource
+    									.path("users")
+    									.path(targetUser.getId())
+    									.path("folders")
+    									.path(folderId)
+    									.queryParam("notify", notify.toString())
+    									.entity(entity)
+    								, Folder.class,
+    								200, 201);
+    }
     
+    /**
+     * Deletes a user in an enterprise account.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:delete-user}
+     * 
+     * @param userId the id of the user being delete
+     * @param notify Determines if the destination user should receive email notification of the transfer.
+     * @param force Whether or not the user should be deleted even if this user still own files.
+     */
+    @Processor
+    public void deleteUser(
+    			String userId,
+    			@Optional @Default("true") Boolean notify,
+    			@Optional @Default("false") Boolean force) {
+    	
+    	this.jerseyUtil.delete(
+    			this.apiResource
+    				.path("users")
+    				.path(userId)
+    				.queryParam("notify", notify.toString())
+    				.queryParam("force", force.toString())
+    			, String.class, 200, 204);
+    }
     
+    /**
+     * Adds a new email alias to the given user’s account.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:create-email-alias}
+     * 
+     * @param userId the id of the user getting the alias
+     * @param email the new email alias
+     * @return an instance of {@link org.mule.modules.box.model.EmailAlias}
+     */
+    @Processor
+    public EmailAlias createEmailAlias(String userId, String email) {
+    	Map<String, String> entity = new HashMap<String, String>();
+    	entity.put("email", email);
+    	
+    	return this.jerseyUtil.post(this.apiResource
+    									.path("users")
+    									.path(userId)
+    									.path("email_aliases"),
+    								EmailAlias.class, 200, 201);
+    }
     
+    /**
+     * Removes an email alias from a user.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:delete-email-alias}
+     * 
+     * @param userId the id of the user owning the alias
+     * @param emailAliasId the id of the alias being deleted
+     */
+    @Processor
+    public void deleteEmailAlias(String userId, String emailAliasId) {
+    	this.jerseyUtil.delete(this.apiResource
+    				.path("users")
+    				.path(userId)
+    				.path("email_aliases")
+    				.path(emailAliasId),
+    			String.class, 200, 204);
+    }
     
+    /**
+     * Used to convert one of the user’s confirmed email aliases into the user’s primary login.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:change-primary-login}
+     * 
+     * @param userId the id of the user being updated
+     * @param login the new login
+     * @return an instance of {@link org.mule.modules.box.model.User} with the modified state
+     */
+    @Processor
+    public User changePrimaryLogin(String userId, String login) {
+    	Map<String, String> entity = new HashMap<String, String>();
+    	entity.put("login", login);
+    	
+    	return this.jerseyUtil.put(this.apiResource
+    								.path("users")
+    								.path(userId)
+    								.entity(entity)
+    							, User.class, 200, 204);
+    }
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
+    /**
+     * Retrieves all email aliases for this user. The collection of email aliases does not include the primary
+     * login for the user
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-email-aliases}
+     * 
+     * @param userId the id of the user whose aliases you want
+     * @return an instance of {@link org.mule.modules.box.model.response.GetEmailAliasResponse}
+     */
+    @Processor
+    public GetEmailAliasResponse getEmailAliases(String userId) {
+    	return this.jerseyUtil.get(this.apiResource
+    								.path("users")
+    								.path(userId)
+    								.path("email_aliases")
+    								, GetEmailAliasResponse.class, 200);
+    }
     
     
     

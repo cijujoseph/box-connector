@@ -14,7 +14,7 @@ import java.util.List;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.Comment;
+import org.mule.modules.box.model.EmailAlias;
 
 /**
  * 
@@ -22,12 +22,12 @@ import org.mule.modules.box.model.Comment;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class GetCommentsResponse implements Serializable {
+public class GetEmailAliasResponse implements Serializable {
 
-	private static final long serialVersionUID = 898153858649940748L;
+	private static final long serialVersionUID = -6289518750096333655L;
 	
 	private Long totalCount;
-	private List<Comment> entries;
+	private List<EmailAlias> entries;
 	
 	@XmlElement(name="total_count")
 	public Long getTotalCount() {
@@ -36,10 +36,11 @@ public class GetCommentsResponse implements Serializable {
 	public void setTotalCount(Long totalCount) {
 		this.totalCount = totalCount;
 	}
-	public List<Comment> getEntries() {
+	public List<EmailAlias> getEntries() {
 		return entries;
 	}
-	public void setEntries(List<Comment> entries) {
+	public void setEntries(List<EmailAlias> entries) {
 		this.entries = entries;
 	}
+	
 }

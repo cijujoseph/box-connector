@@ -181,3 +181,34 @@
 <!-- BEGIN_INCLUDE(box:get-pending-collaborations) -->
     <box:get-pending-collaborations />
 <!-- END_INCLUDE(box:get-pending-collaborations) -->
+<!-- BEGIN_INCLUDE(box:get-user) -->
+    <box:get-user />
+<!-- END_INCLUDE(box:get-user) -->
+<!-- BEGIN_INCLUDE(box:get-users) -->
+    <box:get-users />
+<!-- END_INCLUDE(box:get-users) -->
+<!-- BEGIN_INCLUDE(box:update-user) -->
+    <box:update-user userId="#[flowVars['userId']]" />
+<!-- END_INCLUDE(box:update-user) -->
+<!-- BEGIN_INCLUDE(box:create-user) -->
+    <box:create-user />
+<!-- END_INCLUDE(box:create-user) -->
+<!-- BEGIN_INCLUDE(box:move-folder-to-user) -->
+    <box:move-folder-to-user />
+<!-- END_INCLUDE(box:move-folder-to-user) -->
+<!-- BEGIN_INCLUDE(box:delete-user) -->
+    <box:delete-user userId="#[flowVars['userId']]" />
+<!-- END_INCLUDE(box:delete-user) -->
+<!-- BEGIN_INCLUDE(box:create-email-alias) -->
+    <box:create-email-alias userId="#[flowVars['userId']]" email="mariano.gonzalez@mulesoft.com"/>
+<!-- END_INCLUDE(box:create-email-alias) -->
+<!-- BEGIN_INCLUDE(box:delete-email-alias) -->
+    <box:delete-email-alias userId="#[flowVars['userId']]" emailAliasId="#[flowVars['emailAliasId']]" />
+<!-- END_INCLUDE(box:delete-email-alias) -->
+<!-- BEGIN_INCLUDE(box:change-primary-login) -->
+    <box:change-primary-login userId="#[flowVars['userId']]" login="mariano.gonzalez@mulesoft.com"/>
+<!-- END_INCLUDE(box:change-primary-login) -->
+<!-- BEGIN_INCLUDE(box:get-email-aliases) -->
+    <box:get-email-aliases userId="#[flowVars['userId']]" />
+<!-- END_INCLUDE(box:get-email-aliases) -->
+

@@ -41,17 +41,6 @@ public class User extends EntityDescriptor {
 
 	private static final long serialVersionUID = -5483075221771438061L;
 	
-	private static enum Role {
-		admin,
-		coadmin,
-		user
-	}
-	
-	private static enum Status {
-		active,
-		inactive
-	}
-
 	/**
 	 * The time this user was created
 	 */
@@ -110,7 +99,7 @@ public class User extends EntityDescriptor {
 	/**
 	 * Can be active or inactive
 	 */
-	private Status status;
+	private UserStatus status;
 	
 	/**
 	 * The user’s job title
@@ -239,11 +228,11 @@ public class User extends EntityDescriptor {
 		this.isSyncEnabled = isSyncEnabled;
 	}
 
-	public Status getStatus() {
+	public UserStatus getStatus() {
 		return status;
 	}
 
-	public void setStatus(Status status) {
+	public void setStatus(UserStatus status) {
 		this.status = status;
 	}
 

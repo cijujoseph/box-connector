@@ -13,33 +13,31 @@ import java.util.List;
 
 import javax.xml.bind.annotation.XmlElement;
 
-import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.Comment;
+import org.mule.modules.box.model.User;
 
 /**
  * 
  * @author mariano.gonzalez@mulesoft.com
  *
  */
-@JsonIgnoreProperties(ignoreUnknown=true)
-public class GetCommentsResponse implements Serializable {
+public class GetUsersResponse implements Serializable {
 
-	private static final long serialVersionUID = 898153858649940748L;
+	private static final long serialVersionUID = 7324141555786127870L;
 	
-	private Long totalCount;
-	private List<Comment> entries;
+	private int totalCount;
+	private List<User> entries;
 	
 	@XmlElement(name="total_count")
-	public Long getTotalCount() {
+	public int getTotalCount() {
 		return totalCount;
 	}
-	public void setTotalCount(Long totalCount) {
+	public void setTotalCount(int totalCount) {
 		this.totalCount = totalCount;
 	}
-	public List<Comment> getEntries() {
+	public List<User> getEntries() {
 		return entries;
 	}
-	public void setEntries(List<Comment> entries) {
+	public void setEntries(List<User> entries) {
 		this.entries = entries;
 	}
 }
