@@ -24,10 +24,29 @@ public class EntityDescriptor implements Serializable {
 
 	private static final long serialVersionUID = -7462401190978334169L;
 	
+	/**
+	 * string representing the item's type
+	 */
 	private String type;
+	
+	/**
+	 * the id of the item
+	 */
 	private String id;
+	
+	/**
+	 * The name of the item
+	 */
 	private String name;
+	
+	/**
+	 * A unique string identifying the version of this folder
+	 */
 	private String etag;
+	
+	/**
+	 * A unique ID for use with the /events endpoint
+	 */
 	private String sequenceId;
 	
 	public String getEtag() {

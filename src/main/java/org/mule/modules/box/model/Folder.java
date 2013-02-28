@@ -18,6 +18,9 @@ import org.mule.modules.box.model.descriptor.UserDescriptor;
 
 /**
  * 
+ * Folders contain information about the items contained inside of them, including files and other folders.
+ * There is also a set of metadata such as who owns the folder and when it was modified that is also returned.
+ * 
  * @author mariano.gonzalez@mulesoft.com
  *
  */
@@ -26,29 +29,80 @@ public class Folder extends EntityDescriptor {
 
 	private static final long serialVersionUID = -4254960125347133726L;
 	
-	private String sequenceId;
+	/**
+	 * The time the folder was created
+	 */
 	private String createdAt;
+	
+	/**
+	 * The time the folder or its contents were last modified
+	 */
 	private String modifiedAt;
+	
+	/**
+	 * The description of the folder
+	 */
 	private String description;
+	
+	/**
+	 * Whether this item is deleted or not
+	 */
 	private String itemStatus;
+	
+	/**
+	 * The path of folders to this item, starting at the root
+	 */
 	private Entries paths;
+	
+	/**
+	 * The folder size in bytes
+	 */
 	private Long size;
+	
+	/**
+	 * The shared link for this folder
+	 */
 	private SharedLink sharedLink;
+	
+	/**
+	 * The user who created this folder
+	 */
 	private UserDescriptor createdBy;
+	
+	/**
+	 * The user who last modified this folder
+	 */
 	private UserDescriptor modifiedBy;
+	
+	/**
+	 * The user who owns this folder
+	 */
 	private UserDescriptor ownedBy;
+	
+	/**
+	 * The folder that contains this one
+	 */
 	private FolderItem parent;
+	
+	/**
+	 * Descriptors for folders and files contained in this folder
+	 */
 	private FolderItems items;
 	
+	/**
+	 * Whether this folder will be synced by the Box sync clients or not
+	 */
+	private String syncState;
 	
-	@XmlElement(name="sequence_id")
-	public String getSequenceId() {
-		return sequenceId;
+	@XmlElement(name="sync_state")
+	public String getSyncState() {
+		return syncState;
 	}
-	public void setSequenceId(String sequenceId) {
-		this.sequenceId = sequenceId;
+	
+	public void setSyncState(String syncState) {
+		this.syncState = syncState;
 	}
-
+	
 	@XmlElement(name="created_at")
 	public String getCreatedAt() {
 		return createdAt;

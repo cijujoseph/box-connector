@@ -15,30 +15,95 @@ import org.mule.modules.box.model.descriptor.EntityDescriptor;
 import org.mule.modules.box.model.descriptor.FolderItem;
 
 /**
+ * File objects represent that metadata about individual files in Box, with attributes describing who created the file,
+ * when it was last modified, and other information. The actual content of the file itself is accessible through
+ * download operation
  * 
  * @author mariano.gonzalez@mulesoft.com
- *
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
 public class File extends EntityDescriptor {
 	
 	private static final long serialVersionUID = 6127755562219178478L;
 	
+	/**
+	 * The description of this file
+	 */
 	private String description;
+	
+	/**
+	 * Size of this file in bytes
+	 */
 	private Long size;
-	private String path;
-	private String pathId;
+	
+	/**
+	 * When this file was created on Box’s servers
+	 */
 	private String createdAt;
+	
+	/**
+	 * When this file was last updated on the Box servers
+	 */
 	private String modifiedAt;
+	
+	/**
+	 * When this file was last moved to the trash
+	 */
+	private String trashedAt;
+	
+	/**
+	 * When this file will be permanently deleted
+	 */
+	private String purgedAt;
+	
+	/**
+	 * When the content of this file was created
+	 */
 	private String contentCreatedAt;
+	
+	/**
+	 * When the content of this file was last modified
+	 */
 	private String contentModifiedAt;
+	
+	/**
+	 * The sha1 hash of this file
+	 */
 	private String sha1;
+	
+	/**
+	 * The path of folders to this item, starting at the root
+	 */
+	private Entries paths;
+	
+	/**
+	 * Whether this item is deleted or not
+	 */
 	private String itemStatus;
+	
 	private SharedLink sharedLink;
+	
+	/**
+	 * The user who first created file
+	 */
 	private UserInfo createdBy;
+	
+	/**
+	 * The user who last updated this file
+	 */
 	private UserInfo modifiedBy;
+	
+	/**
+	 * The user who owns this file
+	 */
 	private UserInfo ownedBy;
+	
+	/**
+	 * The folder this file is contained in
+	 */
 	private FolderItem parent;
+	
+	
 	
 	public String getDescription() {
 		return description;
@@ -52,21 +117,6 @@ public class File extends EntityDescriptor {
 	public void setSize(Long size) {
 		this.size = size;
 	}
-	public String getPath() {
-		return path;
-	}
-	public void setPath(String path) {
-		this.path = path;
-	}
-	
-	@XmlElement(name="path_id")
-	public String getPathId() {
-		return pathId;
-	}
-	public void setPathId(String pathId) {
-		this.pathId = pathId;
-	}
-	
 	@XmlElement(name="created_at")
 	public String getCreatedAt() {
 		return createdAt;
@@ -151,5 +201,27 @@ public class File extends EntityDescriptor {
 		this.itemStatus = itemStatus;
 	}
 	
+	@XmlElement(name="trashed_at")
+	public String getTrashedAt() {
+		return trashedAt;
+	}
+	public void setTrashedAt(String trashedAt) {
+		this.trashedAt = trashedAt;
+	}
 	
+	@XmlElement(name="purged_at")
+	public String getPurgedAt() {
+		return purgedAt;
+	}
+	public void setPurgedAt(String purgedAt) {
+		this.purgedAt = purgedAt;
+	}
+	
+	@XmlElement(name="path_collection")
+	public Entries getPaths() {
+		return paths;
+	}
+	public void setPaths(Entries paths) {
+		this.paths = paths;
+	}
 }

@@ -15,6 +15,8 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Formatter;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
@@ -40,6 +42,7 @@ import org.mule.construct.Flow;
 import org.mule.modules.box.jersey.AuthBuilderBehaviour;
 import org.mule.modules.box.jersey.BoxResponseHandler;
 import org.mule.modules.box.jersey.MediaTypesBuilderBehaviour;
+import org.mule.modules.box.model.Comment;
 import org.mule.modules.box.model.Entries;
 import org.mule.modules.box.model.File;
 import org.mule.modules.box.model.Folder;
@@ -1083,6 +1086,66 @@ public class BoxConnector implements MuleContextAware {
     public void permDeleteFile(String fileId) {
     	this.jerseyUtil.delete(this.apiResource.path("files").path(fileId).path("trash"), String.class, 204);
     }
+    
+    /**
+     * Used to retrieve the message and metadata about a specific comment. Information about the user who created the comment is also included.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-comment}
+     * 
+     * @param commentId the id of the comment you want
+     * @return an instance of {@link org.mule.modules.box.model.Comment} representing the message
+     */
+    @Processor
+    public Comment getComment(String commentId) {
+    	return this.jerseyUtil.get(this.apiResource.path("comments").path(commentId), Comment.class, 200);
+    }
+    
+    /**
+     * Used to add a comment by the user to a specific file
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:comment-file}
+     * 
+     * @param fileId the id of the file to be commented on
+     * @param message text of the comment to be posted
+     * @return an instance of {@link org.mule.modules.box.model.Comment} representing the created message
+     */
+    @Processor
+    public Comment commentFile(String fileId, String message) {
+    	Map<String, String> entity = new HashMap<String, String>();
+    	entity.put("message", message);
+    	
+    	return this.jerseyUtil.post(this.apiResource.path("files").path(fileId).path("comments"), Comment.class, 200, 201);
+    }
+    
+    /**
+     * Used to update the message of the comment.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:update-comment}
+     * 
+     * @param commentId the id of the comment to be updated
+     * @param newMessage the new message
+     * @return an instance of {@link org.mule.modules.box.model.Comment} representing the updated message
+     */
+    @Processor
+    public Comment updateComment(String commentId, String newMessage) {
+    	Map<String, String> entity = new HashMap<String, String>();
+    	entity.put("message", newMessage);
+    	
+    	return this.jerseyUtil.put(this.apiResource.path("comments").path(commentId), Comment.class, 200, 201);
+    }
+    
+    /**
+     * Delets a comment.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:delete-comment}
+     * 
+     * @param commentId the id of the comment to be deleted
+     */
+    @Processor
+    public void deleteComment(String commentId) {
+    	this.jerseyUtil.delete(this.apiResource.path("comments").path(commentId), Comment.class, 200);
+    }
+    
 
     public String getAuthToken(MuleMessage message) {
     	String token = null;

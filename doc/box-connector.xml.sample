@@ -139,3 +139,15 @@
 <!-- BEGIN_INCLUDE(box:perm-delete-file) -->
     <box:perm-delete-file fileId="#[flowVars['fileID']]" />
 <!-- END_INCLUDE(box:perm-delete-file) -->
+<!-- BEGIN_INCLUDE(box:comment-file) -->
+    <box:comment-file fileId="#[flowVars['fileID']]" message="hello mule!"/>
+<!-- END_INCLUDE(box:comment-file) -->
+<!-- BEGIN_INCLUDE(box:get-comment) -->
+    <box:get-comment commentId="#[flowVars['commentID']]" />
+<!-- END_INCLUDE(box:get-comment) -->
+<!-- BEGIN_INCLUDE(box:update-comment) -->
+    <box:update-comment commentId="#[flowVars['commentID']]" newMessage="Hello Again Mule!" />
+<!-- END_INCLUDE(box:update-comment) -->
+<!-- BEGIN_INCLUDE(box:delete-comment) -->
+    <box:delete-comment commentId="#[flowVars['commentID']]" />
+<!-- END_INCLUDE(box:delete-comment) -->
