@@ -21,8 +21,12 @@ public class BoxException extends RuntimeException {
 	private ErrorList errors;
 	private int status;
 	
-	public BoxException(String message, Error error) {
+	public BoxException(String message) {
 		super(message);
+	}
+	
+	public BoxException(String message, Error error) {
+		this(message);
 		this.errors = new ErrorList().addError(error);
 		this.status = error.getStatus();
 	}
@@ -34,7 +38,7 @@ public class BoxException extends RuntimeException {
 	}
 	
 	public BoxException(String message, ErrorList errors) {
-		super(message);
+		this(message);
 		this.errors = errors;
 		this.status = this.getStatus(errors);
 	}

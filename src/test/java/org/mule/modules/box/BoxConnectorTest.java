@@ -141,6 +141,11 @@ public class BoxConnectorTest extends FunctionalTestCase {
 		this.callFlow(file.getId(), "testDelete");
 	}
 	
+	@Test
+	public void subscribe() throws Exception {
+		this.callFlow(null, "longPolling");
+	}
+	
 	private File doUpload(InputStream in) throws Exception {
 		return (File) this.callFlow(in, "testUpload").getPayload();
 	}

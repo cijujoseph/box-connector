@@ -48,6 +48,12 @@
 			<artifactId>jersey-multipart</artifactId>
 			<version>${jersey.version}</version>
 		</dependency>
+		
+		<dependency>
+            <groupId>org.cometd.java</groupId>
+            <artifactId>cometd-java-client</artifactId>
+            <version>2.2.0</version>
+        </dependency>
 
 		<dependency>
 			<groupId>org.mule.transports</groupId>

@@ -90,6 +90,13 @@ public class JerseyUtil {
 		return this.execute("GET", resource, entityClass, expectedStatus);
 	}
 	
+	public <T> T options(WebResource resource, Class<T> entityClass, int... expectedStatus) {
+		return this.execute("OPTIONS", resource.getRequestBuilder(), entityClass, expectedStatus);
+	}
+	public <T> T options(WebResource.Builder resource, Class<T> entityClass, int... expectedStatus) {
+		return this.execute("OPTIONS", resource, entityClass, expectedStatus);
+	}
+	
 	public <T> T execute(String method, WebResource resource, Class<T> entityClass, int... expectedStatus) {
 		return this.execute(method, resource.getRequestBuilder(), entityClass, expectedStatus);
 	}

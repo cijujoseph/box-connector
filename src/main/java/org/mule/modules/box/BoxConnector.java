@@ -42,6 +42,7 @@ import org.mule.api.context.MuleContextAware;
 import org.mule.commons.jersey.JerseyUtil;
 import org.mule.construct.Flow;
 import org.mule.modules.box.callback.AuthCallbackAdapter;
+import org.mule.modules.box.exception.BoxException;
 import org.mule.modules.box.jersey.AuthBuilderBehaviour;
 import org.mule.modules.box.jersey.BoxResponseHandler;
 import org.mule.modules.box.jersey.MediaTypesBuilderBehaviour;
@@ -54,6 +55,7 @@ import org.mule.modules.box.model.File;
 import org.mule.modules.box.model.Folder;
 import org.mule.modules.box.model.GetItemsResponse;
 import org.mule.modules.box.model.Item;
+import org.mule.modules.box.model.LongPollingServer;
 import org.mule.modules.box.model.SharedLink;
 import org.mule.modules.box.model.StreamType;
 import org.mule.modules.box.model.ThumbnailSize;
@@ -71,6 +73,7 @@ import org.mule.modules.box.model.response.GetEmailAliasResponse;
 import org.mule.modules.box.model.response.GetEventsResponse;
 import org.mule.modules.box.model.response.GetTicketResponse;
 import org.mule.modules.box.model.response.GetUsersResponse;
+import org.mule.modules.box.model.response.LongPollingServerResponse;
 import org.mule.modules.box.model.response.UploadFileResponse;
 
 import com.sun.jersey.api.client.Client;
@@ -1634,8 +1637,29 @@ public class BoxConnector implements MuleContextAware {
     }
     
     
-    
-    
+//    /**
+//     * Retrieves events for all users in an enterprise.
+//     * Upper and lower bounds as well as filters can be applied to the results.
+//     * 
+//     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-events}
+//     * 
+//     */
+//    @Processor
+//    public void subscribe() {
+//    	LongPollingServerResponse response = this.jerseyUtil.options(this.apiResource.path("events"), LongPollingServerResponse.class, 200);
+//    	
+//    	if (CollectionUtils.isEmpty(response.getEntries())) {
+//    		throw new BoxException("Box did not returned a long polling server back");
+//    	}
+//    	
+//    	LongPollingServer server = response.getEntries().get(0);
+//    	String channel = server.getChannel();
+//    	String host = server.getHost();
+//    	
+//    	System.out.println(channel);
+//    	System.out.println(host);
+//    	
+//    }
     
     
     

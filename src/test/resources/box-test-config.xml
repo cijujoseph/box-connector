@@ -77,4 +77,8 @@ http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/cor
     	<box:download fileId="#[payload]" />
     </flow>
     
+    <flow name="longPolling">
+    	<box:subscribe />
+    </flow>
+    
 </mule>
