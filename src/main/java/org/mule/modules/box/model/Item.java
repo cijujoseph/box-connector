@@ -9,7 +9,6 @@
 package org.mule.modules.box.model;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.descriptor.EntityDescriptor;
 
 /**
  * 
@@ -17,7 +16,7 @@ import org.mule.modules.box.model.descriptor.EntityDescriptor;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class Item extends EntityDescriptor {
+public class Item extends Entity {
 
 	private static final long serialVersionUID = 3406333075012024404L;
 	

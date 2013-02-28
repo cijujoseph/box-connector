@@ -11,7 +11,6 @@ package org.mule.modules.box.model;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.descriptor.EntityDescriptor;
 
 /**
  * Discussions are sets of comments related to a single folder.
@@ -20,7 +19,7 @@ import org.mule.modules.box.model.descriptor.EntityDescriptor;
  * @author mariano.gonzalez@mulesoft.com
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class Discussion extends EntityDescriptor {
+public class Discussion extends Entity {
 	
 	private static final long serialVersionUID = -6017687026974352422L;
 	

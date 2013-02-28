@@ -211,4 +211,6 @@
 <!-- BEGIN_INCLUDE(box:get-email-aliases) -->
     <box:get-email-aliases userId="#[flowVars['userId']]" />
 <!-- END_INCLUDE(box:get-email-aliases) -->
-
+<!-- BEGIN_INCLUDE(box:get-events) -->
+    <box:get-events streamPosition="0" />
+<!-- END_INCLUDE(box:get-events) -->

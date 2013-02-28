@@ -6,7 +6,7 @@
  * LICENSE.md file.
  */
 
-package org.mule.modules.box.model.descriptor;
+package org.mule.modules.box.model;
 
 import java.io.Serializable;
 
@@ -20,7 +20,7 @@ import org.codehaus.jackson.annotate.JsonIgnoreProperties;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class EntityDescriptor implements Serializable {
+public class Entity implements Serializable {
 
 	private static final long serialVersionUID = -7462401190978334169L;
 	

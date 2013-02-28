@@ -6,15 +6,25 @@
  * LICENSE.md file.
  */
 
-package org.mule.modules.box;
+package org.mule.modules.box.model;
 
 /**
- * 
+ * Limits the type of events returned
  * @author mariano.gonzalez@mulesoft.com
  *
  */
-public enum Target {
+public enum StreamType {
 
-	file,
-	folder
+	/**
+	 * everything
+	 */
+	all,
+	/**
+	 * tree changes,
+	 */
+	changes,
+	/**
+	 * tree changes only for sync folders
+	 */
+	sync
 }

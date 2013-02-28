@@ -14,7 +14,6 @@ import java.util.Map;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.descriptor.EntityDescriptor;
 
 /**
  * The users endpoint is used for managing a user and its content.
@@ -37,7 +36,7 @@ import org.mule.modules.box.model.descriptor.EntityDescriptor;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class User extends EntityDescriptor {
+public class User extends Entity {
 
 	private static final long serialVersionUID = -5483075221771438061L;
 	
@@ -129,7 +128,7 @@ public class User extends EntityDescriptor {
 	/**
 	 * representation of this user’s enterprise, including the ID of its enterprise
 	 */
-	private EntityDescriptor enterprise;
+	private Entity enterprise;
 	
 
 	public String getLogin() {
@@ -280,11 +279,11 @@ public class User extends EntityDescriptor {
 		this.isExemptFromLoginVerification = isExemptFromLoginVerification;
 	}
 	
-	public EntityDescriptor getEnterprise() {
+	public Entity getEnterprise() {
 		return enterprise;
 	}
 
-	public void setEnterprise(EntityDescriptor enterprise) {
+	public void setEnterprise(Entity enterprise) {
 		this.enterprise = enterprise;
 	}
 	

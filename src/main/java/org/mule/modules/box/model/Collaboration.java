@@ -11,7 +11,6 @@ package org.mule.modules.box.model;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.descriptor.EntityDescriptor;
 
 /**
  * Collaborations are Box’s equivalent of access control lists.
@@ -20,7 +19,7 @@ import org.mule.modules.box.model.descriptor.EntityDescriptor;
  * @author mariano.gonzalez@mulesoft.com
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class Collaboration extends EntityDescriptor {
+public class Collaboration extends Entity {
 	
 	private static final long serialVersionUID = -9160092964332743659L;
 	

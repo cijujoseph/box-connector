@@ -16,11 +16,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Formatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -53,6 +55,7 @@ import org.mule.modules.box.model.Folder;
 import org.mule.modules.box.model.GetItemsResponse;
 import org.mule.modules.box.model.Item;
 import org.mule.modules.box.model.SharedLink;
+import org.mule.modules.box.model.StreamType;
 import org.mule.modules.box.model.ThumbnailSize;
 import org.mule.modules.box.model.User;
 import org.mule.modules.box.model.request.CopyItemRequest;
@@ -65,6 +68,7 @@ import org.mule.modules.box.model.response.GetAuthTokenResponse;
 import org.mule.modules.box.model.response.GetCollaborationsResponse;
 import org.mule.modules.box.model.response.GetCommentsResponse;
 import org.mule.modules.box.model.response.GetEmailAliasResponse;
+import org.mule.modules.box.model.response.GetEventsResponse;
 import org.mule.modules.box.model.response.GetTicketResponse;
 import org.mule.modules.box.model.response.GetUsersResponse;
 import org.mule.modules.box.model.response.UploadFileResponse;
@@ -1550,6 +1554,86 @@ public class BoxConnector implements MuleContextAware {
     								.path("email_aliases")
     								, GetEmailAliasResponse.class, 200);
     }
+    
+    /**
+     * 
+     * Use this to get events for a given user. A chunk of event objects is returned for the user based on the parameters passed in.
+     * Parameters indicating how many chunks are left as well as the next streamPosition are also returned.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-events}
+     * 
+     * @param streamPosition The location in the event stream at which you want to start receiving events.
+     * 						Can specify special case ‘now’ to get 0 events and the latest stream position for initialization.
+     * @param streamType Limits the type of events returned
+     * @param limit Limits the number of events returned
+     * @return an instance of {@link org.mule.modules.box.model.response.GetEventsResponse}
+     */
+    @Processor
+    public GetEventsResponse getEvents(Long streamPosition, @Optional @Default("all") StreamType streamType, @Optional @Default("100") Long limit) {
+    	return this.jerseyUtil.get(this.apiResource
+    				.path("events")
+    				.queryParam("stream_position", streamPosition.toString())
+    				.queryParam("stream_type", streamType.name())
+    				.queryParam("limit", limit.toString())
+    				, GetEventsResponse.class, 200, 204);	
+    }
+    
+    /**
+     * Retrieves events for all users in an enterprise.
+     * Upper and lower bounds as well as filters can be applied to the results.
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-events}
+     * 
+     * @param createdAfter A lower bound on the timestamp of the events returned
+     * @param createdBefore An upper bound on the timestamp of the events returned
+     * @param eventTypes list of events to filter by
+     * @param limit Limits the number of events returned
+     * @param offset The item at which to start
+     * @return an instance of {@link org.mule.modules.box.model.response.GetEventsResponse}
+     */
+    @Processor
+    public GetEventsResponse getEnterpriseEvents(
+    		@Optional String createdAfter,
+    		@Optional String createdBefore,
+    		@Optional List<String> eventTypes,
+    		@Optional @Default("100") Long limit,
+    		@Optional @Default("0") Long offset
+    		) {
+    	
+    	WebResource resource = this.apiResource.path("events")
+    							.queryParam("stream_type", "admin_logs")
+    							.queryParam("limit", limit.toString())
+    							.queryParam("offset", offset.toString());
+    	
+    	if (createdAfter != null) {
+    		resource = resource.queryParam("created_after", createdAfter);
+    	}
+    	
+    	if (createdBefore != null) {
+    		resource = resource.queryParam("created_before", createdBefore.toString());
+    	}
+    	
+    	if (!CollectionUtils.isEmpty(eventTypes)) {
+    		StringBuilder builder = new StringBuilder();
+    		boolean isFirst = true;
+    		for (String value : eventTypes) {
+    			
+    			if (isFirst) {
+    				isFirst = false;
+    			} else {
+    				builder.append(',');
+    			}
+    			
+    			builder.append(value);
+    		}
+    		
+    		resource = resource.queryParam("event_type", builder.toString());
+    	}
+    	
+    	return this.jerseyUtil.get(resource, GetEventsResponse.class, 200);
+    }
+    
+    
     
     
     

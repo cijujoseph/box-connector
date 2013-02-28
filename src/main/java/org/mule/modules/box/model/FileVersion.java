@@ -11,8 +11,6 @@ package org.mule.modules.box.model;
 import javax.xml.bind.annotation.XmlAttribute;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.descriptor.EntityDescriptor;
-import org.mule.modules.box.model.descriptor.UserDescriptor;
 
 /**
  * 
@@ -20,7 +18,7 @@ import org.mule.modules.box.model.descriptor.UserDescriptor;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class FileVersion extends EntityDescriptor {
+public class FileVersion extends Entity {
 	
 	private static final long serialVersionUID = -6217715633340403696L;
 	
@@ -28,7 +26,7 @@ public class FileVersion extends EntityDescriptor {
 	private Long size;
 	private String createdAt;
 	private String modifiedAt;
-	private UserDescriptor modifiedBy;
+	private User modifiedBy;
 	
 	public String getSha1() {
 		return sha1;
@@ -60,10 +58,10 @@ public class FileVersion extends EntityDescriptor {
 	}
 	
 	@XmlAttribute(name="modified_by")
-	public UserDescriptor getModifiedBy() {
+	public User getModifiedBy() {
 		return modifiedBy;
 	}
-	public void setModifiedBy(UserDescriptor modifiedBy) {
+	public void setModifiedBy(User modifiedBy) {
 		this.modifiedBy = modifiedBy;
 	}
 	

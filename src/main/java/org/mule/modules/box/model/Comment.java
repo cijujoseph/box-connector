@@ -11,8 +11,6 @@ package org.mule.modules.box.model;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.descriptor.EntityDescriptor;
-import org.mule.modules.box.model.descriptor.UserDescriptor;
 
 /**
  *
@@ -23,7 +21,7 @@ import org.mule.modules.box.model.descriptor.UserDescriptor;
  * @author mariano.gonzalez@mulesoft.com
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class Comment extends EntityDescriptor {
+public class Comment extends Entity {
 
 	private static final long serialVersionUID = 7670402222846957689L;
 	
@@ -46,7 +44,7 @@ public class Comment extends EntityDescriptor {
 	/**
 	 *  object representing the author of the comment
 	 */
-	private UserDescriptor createdBy;
+	private User createdBy;
 	
 	/**
 	 * The time this comment was created
@@ -78,10 +76,10 @@ public class Comment extends EntityDescriptor {
 	}
 	
 	@XmlElement(name="created_by")
-	public UserDescriptor getCreatedBy() {
+	public User getCreatedBy() {
 		return createdBy;
 	}
-	public void setCreatedBy(UserDescriptor createdBy) {
+	public void setCreatedBy(User createdBy) {
 		this.createdBy = createdBy;
 	}
 	

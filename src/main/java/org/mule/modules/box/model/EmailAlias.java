@@ -11,7 +11,6 @@ package org.mule.modules.box.model;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.descriptor.EntityDescriptor;
 
 /**
  * 
@@ -19,7 +18,7 @@ import org.mule.modules.box.model.descriptor.EntityDescriptor;
  *
  */
 @JsonIgnoreProperties(ignoreUnknown=true)
-public class EmailAlias extends EntityDescriptor {
+public class EmailAlias extends Entity {
 	
 	private static final long serialVersionUID = 4547172874961017723L;
 	

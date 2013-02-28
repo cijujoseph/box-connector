@@ -14,7 +14,6 @@ import java.util.List;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.descriptor.EntityDescriptor;
 
 /**
  * 
@@ -27,7 +26,7 @@ public class Entries implements Serializable {
 	private static final long serialVersionUID = -2104625659342586532L;
 	
 	private long totalCount;
-	private List<EntityDescriptor> entries;
+	private List<Entity> entries;
 	
 	@XmlElement(name="total_count")
 	public long getTotalCount() {
@@ -36,10 +35,10 @@ public class Entries implements Serializable {
 	public void setTotalCount(long totalCount) {
 		this.totalCount = totalCount;
 	}
-	public List<EntityDescriptor> getEntries() {
+	public List<Entity> getEntries() {
 		return entries;
 	}
-	public void setEntries(List<EntityDescriptor> entries) {
+	public void setEntries(List<Entity> entries) {
 		this.entries = entries;
 	}
 }

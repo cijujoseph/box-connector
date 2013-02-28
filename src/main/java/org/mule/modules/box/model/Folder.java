@@ -12,7 +12,6 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
-import org.mule.modules.box.model.descriptor.UserDescriptor;
 
 /**
  * 
@@ -65,17 +64,17 @@ public class Folder extends Item {
 	/**
 	 * The user who created this folder
 	 */
-	private UserDescriptor createdBy;
+	private User createdBy;
 	
 	/**
 	 * The user who last modified this folder
 	 */
-	private UserDescriptor modifiedBy;
+	private User modifiedBy;
 	
 	/**
 	 * The user who owns this folder
 	 */
-	private UserDescriptor ownedBy;
+	private User ownedBy;
 	
 	/**
 	 * The folder that contains this one
@@ -138,26 +137,26 @@ public class Folder extends Item {
 	}
 	
 	@XmlElement(name="created_by")
-	public UserDescriptor getCreatedBy() {
+	public User getCreatedBy() {
 		return createdBy;
 	}
-	public void setCreatedBy(UserDescriptor createdBy) {
+	public void setCreatedBy(User createdBy) {
 		this.createdBy = createdBy;
 	}
 	
 	@XmlElement(name="modified_by")
-	public UserDescriptor getModifiedBy() {
+	public User getModifiedBy() {
 		return modifiedBy;
 	}
-	public void setModifiedBy(UserDescriptor modifiedBy) {
+	public void setModifiedBy(User modifiedBy) {
 		this.modifiedBy = modifiedBy;
 	}
 	
 	@XmlElement(name="owned_by")
-	public UserDescriptor getOwnedBy() {
+	public User getOwnedBy() {
 		return ownedBy;
 	}
-	public void setOwnedBy(UserDescriptor ownedBy) {
+	public void setOwnedBy(User ownedBy) {
 		this.ownedBy = ownedBy;
 	}
 	public Item getParent() {
