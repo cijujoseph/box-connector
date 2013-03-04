@@ -14,7 +14,6 @@ import junit.framework.Assert;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.junit.Test;
 import org.mule.api.MessagingException;
 import org.mule.api.MuleEvent;
 import org.mule.api.MuleMessage;
@@ -37,7 +36,7 @@ public class BoxConnectorTest extends FunctionalTestCase {
 	}
 	
 	
-	@Test
+	// @Test
 	public void authenticate() throws Exception {
 		Object t = this.callFlow("", "testGetTicket").getPayload();
 		Assert.assertTrue("Ticket was not a string", t instanceof String);
@@ -56,13 +55,13 @@ public class BoxConnectorTest extends FunctionalTestCase {
 		}
 	}
 	
-	@Test
+	// @Test
 	public void getFolders() throws Exception {
 		Folder folder = (Folder) this.callFlow("", "testListFolders").getPayload();
 		Assert.assertEquals(folder.getId(), "0");
 	}
 	
-	@Test
+	// @Test
 	public void createAndCopyFolder() throws Exception {
 		final String name = "My mule connector folder";
 		Folder folder = (Folder) this.callFlow(name, "testCreateFolder").getPayload();
@@ -78,19 +77,19 @@ public class BoxConnectorTest extends FunctionalTestCase {
 		this.callFlow(targetFolder.getId(), "testDeleteFolder");
 	}
 	
-	@Test
+	// @Test
 	public void listFolder() throws Exception {
 		GetItemsResponse items = (GetItemsResponse) this.callFlow("", "testListFolder").getPayload();
 		Assert.assertTrue(items.getTotalCount() > 0);
 	}
 	
-	@Test
+	// @Test
 	public void trashed() throws Exception {
 		GetItemsResponse items = (GetItemsResponse) this.callFlow("", "testTrashed").getPayload();
 		Assert.assertFalse(items.getEntries().isEmpty());
 	}
 	
-	@Test
+	// @Test
 	public void downloadFile() throws Exception {
 		InputStream test = this.getTestFile();
 		InputStream downloaded = null;
@@ -111,7 +110,7 @@ public class BoxConnectorTest extends FunctionalTestCase {
 		}
 	}
 	
-	@Test
+	// @Test
 	public void uploadNewVersion() throws Exception {
 		InputStream test = this.getTestFile();
 		String fileId = null;
@@ -133,7 +132,7 @@ public class BoxConnectorTest extends FunctionalTestCase {
 
 	}
 	
-	@Test
+	// @Test
 	public void upload() throws Exception {
 		InputStream in = this.getTestFile();
 		File file = this.doUpload(in);
@@ -141,7 +140,7 @@ public class BoxConnectorTest extends FunctionalTestCase {
 		this.callFlow(file.getId(), "testDelete");
 	}
 	
-	@Test
+	// @Test
 	public void subscribe() throws Exception {
 		this.callFlow(null, "longPolling");
 	}

@@ -13,6 +13,7 @@ import java.util.List;
 
 import javax.xml.bind.annotation.XmlElement;
 
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.mule.modules.box.model.LongPollingServer;
 
 
@@ -21,6 +22,7 @@ import org.mule.modules.box.model.LongPollingServer;
  * @author mariano.gonzalez@mulesoft.com
  *
  */
+@JsonIgnoreProperties(ignoreUnknown=true)
 public class LongPollingServerResponse implements Serializable {
 
 	private static final long serialVersionUID = -8934595447569347300L;

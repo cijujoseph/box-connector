@@ -14,38 +14,42 @@ package org.mule.modules.box;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Formatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.inject.Inject;
 import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
-import org.mule.DefaultMuleMessage;
-import org.mule.api.MuleContext;
 import org.mule.api.MuleException;
-import org.mule.api.MuleMessage;
 import org.mule.api.annotations.Configurable;
 import org.mule.api.annotations.Connector;
 import org.mule.api.annotations.Processor;
+import org.mule.api.annotations.Source;
+import org.mule.api.annotations.SourceThreadingModel;
 import org.mule.api.annotations.lifecycle.Start;
-import org.mule.api.annotations.lifecycle.Stop;
+import org.mule.api.annotations.oauth.OAuth2;
+import org.mule.api.annotations.oauth.OAuthAccessToken;
+import org.mule.api.annotations.oauth.OAuthAccessTokenIdentifier;
+import org.mule.api.annotations.oauth.OAuthConsumerKey;
+import org.mule.api.annotations.oauth.OAuthConsumerSecret;
+import org.mule.api.annotations.oauth.OAuthPostAuthorization;
+import org.mule.api.annotations.oauth.OAuthProtected;
 import org.mule.api.annotations.param.Default;
 import org.mule.api.annotations.param.Optional;
-import org.mule.api.context.MuleContextAware;
+import org.mule.api.callback.SourceCallback;
+import org.mule.api.callback.StopSourceCallback;
 import org.mule.commons.jersey.JerseyUtil;
-import org.mule.construct.Flow;
-import org.mule.modules.box.callback.AuthCallbackAdapter;
 import org.mule.modules.box.exception.BoxException;
 import org.mule.modules.box.jersey.AuthBuilderBehaviour;
 import org.mule.modules.box.jersey.BoxResponseHandler;
 import org.mule.modules.box.jersey.MediaTypesBuilderBehaviour;
+import org.mule.modules.box.lp.LongPollingClient;
 import org.mule.modules.box.model.Collaboration;
 import org.mule.modules.box.model.Comment;
 import org.mule.modules.box.model.Discussion;
@@ -66,12 +70,10 @@ import org.mule.modules.box.model.request.CreateSharedLinkRequest;
 import org.mule.modules.box.model.request.RestoreTrashedItemRequest;
 import org.mule.modules.box.model.request.UpdateItemRequest;
 import org.mule.modules.box.model.response.FileVersionResponse;
-import org.mule.modules.box.model.response.GetAuthTokenResponse;
 import org.mule.modules.box.model.response.GetCollaborationsResponse;
 import org.mule.modules.box.model.response.GetCommentsResponse;
 import org.mule.modules.box.model.response.GetEmailAliasResponse;
 import org.mule.modules.box.model.response.GetEventsResponse;
-import org.mule.modules.box.model.response.GetTicketResponse;
 import org.mule.modules.box.model.response.GetUsersResponse;
 import org.mule.modules.box.model.response.LongPollingServerResponse;
 import org.mule.modules.box.model.response.UploadFileResponse;
@@ -96,19 +98,17 @@ import com.sun.jersey.multipart.impl.MultiPartWriter;
  * @author mariano.gonzalez@mulesoft.com
  */
 @Connector(name="box", schemaVersion="2.0", friendlyName="Box", minMuleVersion="3.3")
-public class BoxConnector implements MuleContextAware {
+@OAuth2(
+		authorizationUrl = "https://api.box.com/oauth2/authorize",
+		accessTokenUrl = "https://api.box.com/oauth2/token",
+		accessTokenRegex="\"access_token\"[ ]*:[ ]*\"([^\\\"]*)\"",
+		expirationRegex="\"expires_in\"[ ]*:[ ]*([\\d]*)",
+		refreshTokenRegex="\"refresh_token\"[ ]*:[ ]*\"([^\\\"]*)\""
+)
+public class BoxConnector {
     
-	private static final Logger logger = Logger.getLogger(BoxConnector.class);
-	
-	private static final String BOX_AUTH_TICKET = "boxAuthTicket";
-	private static final String BOX_AUTH_TOKEN = "boxAuthToken";
-	
 	private Client client;
 	
-	private MuleContext muleContext;
-	private AuthCallbackAdapter authCallback;
-	
-    
 	/**
 	 * The api's base url
 	 */
@@ -126,175 +126,53 @@ public class BoxConnector implements MuleContextAware {
 	private String uploadUrl;
 	
 	/**
-	 * The url where the user needs to enter his credentials
-	 */
-	@Configurable
-	@Optional
-	@Default("https://www.box.com/api/1.0/rest")
-	private String authUrl;
+     * The OAuth2 client id 
+     */
+    @Configurable
+    @OAuthConsumerKey
+    private String clientId;
+
+    /**
+     * The OAuth2 client secret 
+     */
+    @Configurable
+    @OAuthConsumerSecret
+    private String clientSecret;
+    
+    @OAuthAccessToken
+    private String accessToken;
+    
+    /**
+     * Long polling timeout in millis
+     */
+    @Configurable
+    @Optional
+    @Default("120000")
+    private int longPollingTimeout;
+    
+    /**
+     * Long polling handshake timeout in millis 
+     */
+    @Configurable
+    @Optional
+    @Default("30000")
+    private int longPollingHandshakeTimeout;
+    
+    private LongPollingClient longPollingClient = null;
+    
+    /**
+     * This list holds the source callbacks for long polling that can't yet be served
+     * because authorization hasn't happened
+     */
+    private static List<SourceCallback> pendingSubscriptions = new ArrayList<SourceCallback>();
+    
+    private String accessTokenIdentifier;
 	
-	/**
-     * The API key obtained when registering a project with the Box platform.
-     * For more information about this field please refer to {@link http://developers.box.net/}
-     */
-    @Configurable
-    private String apiKey;
-    
-    /**
-     * If true, an http inbound endpoint will be set in place to receive a callback
-     * from box.net with the authToken once the user has authenticated.
-     * 
-     * If this callback is in place, there's no need for you to manually
-     * invoke the get-auth-token processor.
-     * 
-     * For more info look at http://developers.box.net/w/page/12923915/ApiAuthentication
-     * 
-     * Defaults to false
-     */
-    @Optional
-    @Configurable
-    @Default("false")
-    private boolean usesCallback = false;
-    
-    
-    /**
-     * The url where box.net will direct the authentication callback.
-     * For more info look at http://developers.box.net/w/page/12923915/ApiAuthentication
-     * 
-     * Defaults to box_auth_callback
-     */
-    @Optional
-    @Configurable
-    @Default("box_auth_callback")
-    private String callbackPath = "box_auth_callback";
-   
-    /**
-     * The port where the authentication callback will be listening on
-     * Defaults to 8080
-     */
-    @Optional
-    @Configurable
-    @Default("8080")
-    private Integer callbackPort;
-    
-    /**
-     * The name of a flow to be executed each time the authentication token
-     * needs to be used. If this attribute is specified, 	then a flow with this named
-     * will be fetch on the registry and invoked every time the auth token is needed.
-     * This flow will receive a copy of the current mule message and must set the payload
-     * to a valid auth token. If the flow fails to accomplish that, an exception will be thrown
-     * 
-     * For example:
-     * 
-     * &lt;box:config apiKey="${apiKey}" restoreAuthTokenFlow="restoreTokenFlow" saveAuthTokenFlow="saveTokenFlow"/&gt;
-     * 
-     *  &lt;flow name="restoreTokenFlow"&gt;
-     *		&lt;objectstore:retrieve key="flowVars['currentUserId']"/&gt;
-     *	&lt;/flow&gt;
-     *
-     *	&lt;flow name="save"&gt;
-     *		&lt;objectstore:store key="flowVars['currentUserId']" value-ref="#[flowVars['boxAuthToken']]"/&gt;
-     *	&lt;/flow&gt;
-     *
-     *	If this attribute is not specified, then the token will be fetched from memory. Notice that this means the token won't survive
-     * an application restart and that the connector would be incapable of handling two different concurrent accounts
-     */
-    @Configurable
-    @Optional
-    private String restoreAuthTokenFlow;
-    
-    /**
-     * The name of a flow to be executed each time an authentication token
-     * is received. If this attribute is specified, then a flow with this name
-     * will be fetch on the registry and invoked every time the auth token is obtained.
-     * This flow will receive a copy of the current mule message carrying two additional invocation variables:
-     * 
-     * <ul>
-     * 	<li>boxAuthTicket: The ticket for which the authorization token was generated</li>
-     * 	<li>boxAuthToken: The obtained authorization token
-     * </ul>
-     * 
-     * For example:
-     * 
-     * &lt;box:config apiKey="${apiKey}" restoreAuthTokenFlow="restoreTokenFlow" saveAuthTokenFlow="saveTokenFlow"/&gt;
-     * 
-     *  &lt;flow name="restoreTokenFlow"&gt;
-     *		&lt;objectstore:retrieve key="flowVars['currentUserId']"/&gt;
-     *	&lt;/flow&gt;
-     *
-     *	&lt;flow name="save"&gt;
-     *		&lt;objectstore:store key="flowVars['currentUserId']" value-ref="#[flowVars['boxAuthToken']]"/&gt;
-     *	&lt;/flow&gt;
-     *
-     * If this attribute is not specified, then the token will be stored in memory. Notice that this means the token won't survive
-     * an application restart and that the connector would be incapable of handling two different concurrent accounts
-     */
-    @Configurable
-    @Optional
-    private String saveAuthTokenFlow;
-    
-    /**
-     * The name of a flow to be invoked after an authorization callback is received.
-     * If {@link usesCallback} is false then this flow will never be invoked.
-     * 
-     * This flow will receive a copy of the current mule message carrying two additional invocation variables:
-     * 
-     * <ul>
-     * 	<li>boxAuthTicket: The ticket for which the authorization token was generated</li>
-     * 	<li>boxAuthToken: The obtained authorization token
-     * </ul>
-     * 
-     * For example:
-     * 
-     * &lt;box:config apiKey="${apiKey}" restoreAuthTokenFlow="restoreTokenFlow" saveAuthTokenFlow="saveTokenFlow"/&gt;
-     * 
-     *  &lt;flow name="restoreTokenFlow"&gt;
-     *		&lt;objectstore:retrieve key="flowVars['currentUserId']"/&gt;
-     *	&lt;/flow&gt;
-     *
-     *	&lt;flow name="save"&gt;
-     *		&lt;objectstore:store key="flowVars['currentUserId']" value-ref="#[flowVars['boxAuthToken']]"/&gt;
-     *	&lt;/flow&gt;
-     * 
-     * This flow will receive the same mule message the auth callback receives. If additionaly you also
-     * provided a saveAuthTokenFlow, then any mutations done to the message there are also available in this flow
-     */
-    @Configurable
-    @Optional
-    private String postAuthFlow;
-    
-    /**
-     * The http connector to be used when serving the authorization callback.
-     * If {@link usesCallback} is false then this connector is not used.
-     * 
-     * If not provided, the default http connector under the key 'connector.http.mule.default' will be used.
-     * However, specifying an https connector is adviced. 
-     */
-    @Configurable
-    @Optional
-    private org.mule.api.transport.Connector httpConnector;
-    
-    /**
-     * Actual restore token flow egarly fetched
-     */
-    private Flow restoreTokenFlow;
-    
-    /**
-     * Actual save token flow egarly fetched
-     */
-    private Flow saveTokenFlow;
-    
-    private Flow postAuthorizationFlow;
-    
-    private String authToken;
-    
     private JerseyUtil jerseyUtil;
     
     private WebResource apiResource;
     
     private WebResource uploadResource;
-    
-    private WebResource authResource;
     
     /**
      * This method initiaes the box client and the auth callback.
@@ -316,23 +194,10 @@ public class BoxConnector implements MuleContextAware {
     	
     	this.client = Client.create(clientConfig);
     	
-    	this.authCallback = new AuthCallbackAdapter(this.muleContext, this);
-		this.authCallback.setLocalPort(this.getCallbackPort());
-		this.authCallback.setAsync(false);
-
-		if (this.usesCallback) {
-			this.postAuthorizationFlow = this.fetchFlow(this.postAuthFlow);
-			this.authCallback.start();
-    	}
-		
-		this.restoreTokenFlow = this.fetchFlow(this.restoreAuthTokenFlow);
-		this.saveTokenFlow = this.fetchFlow(this.saveAuthTokenFlow);
-		
 		this.initJerseyUtil();
 		
 		this.apiResource = this.client.resource(this.baseUrl);
 		this.uploadResource = this.client.resource(this.uploadUrl);
-		this.authResource = this.client.resource(this.authUrl);
     }
     
     private void initJerseyUtil() {
@@ -343,141 +208,22 @@ public class BoxConnector implements MuleContextAware {
     						.build();
     }
     
-    @Stop
-    public void onStop() throws MuleException {
-    	if (this.usesCallback) {
-    		this.authCallback.stop();
+    @OAuthAccessTokenIdentifier
+    public String getOAuthTokenAccessIdentifier() {
+    	return this.accessTokenIdentifier;
+    }
+    
+    @OAuthPostAuthorization
+    public void postAuth() {
+    	User user = this.getUser();
+    	this.accessTokenIdentifier = user.getLogin();
+    	
+    	for (SourceCallback callback : pendingSubscriptions) {
+    		this.subscribe(callback);
     	}
     }
     
     
-    /**
-     * Get and access ticket using the configured apiKey. Optionally, you can ask the connector to automatically
-     * redirect the browser to box authorization page so that the user can enter his credentials. This is done
-     * by invoking {@link org.mule.modules.box.BoxConnector.authorizeTicket(MuleMessage, String)}
-     * 
-     * Otherwise, the user needs to manually go to {@link https://www.box.com/api/1.0/auth/&lt;&lt;ticket&gt;&gt;}
-     * 
-     * Either way, the connector <b>WILL NOT</b> be responsible for storing this ticket.
-     * 
-     * For more info look at {@link http://developers.box.com/get-started/}
-     * 
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-ticket}
-     * 
-     * @param message the current mule message
-     * @param redirect if true, then the browser will be automatically redirected to https://www.box.net/api/1.0/auth/&lt;&lt;ticket&gt;&gt;
-     *  
-     * @return the obtained ticket
-     */
-    @Processor
-    @Inject
-    public String getTicket(MuleMessage message, @Optional @Default("true") Boolean redirect) {
-    	
-    	GetTicketResponse response = this.authResource
-						    			.queryParam("action", "get_ticket")
-						    			.queryParam("api_key", this.apiKey)
-							    		.accept(MediaType.APPLICATION_XML)
-							    		.get(GetTicketResponse.class);
-    	if (response.isValid()) {
-    		
-    		String ticket = response.getTicket();
-    		
-    		if (logger.isDebugEnabled()) {
-    			logger.debug(String.format("Fetched ticket with apiKey %s and obtained %s", this.apiKey, ticket));
-    		}
-
-    		if (redirect) {
-    			this.authorizeTicket(message, ticket);
-    		}
-    		
-    		return ticket;
-    	
-    	} else {
-    		throw new RuntimeException(String.format("Failed to obtain ticket. Box response was %s", response.getStatus()));
-    	}
-    	
-    }
-    
-    /**
-     * Redirects the browser to box authorization page so that the user can enter his credentials.
-     * The new location will be {@link https://www.box.net/api/1.0/auth/&lt;&lt;ticket&gt;&gt;}
-     * 
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:authorize-ticket}
-     * 
-     * @param message the current mule message
-     * @param ticket the ticket to be authorized
-     */
-    @Processor
-    @Inject
-    public void authorizeTicket(MuleMessage message, String ticket) {
-    	String redirectUrl = "https://www.box.com/api/1.0/auth/" + ticket;
-    	
-    	if (logger.isDebugEnabled()) {
-    		logger.debug(String.format("redirecting to %s for authorizing ticket %s", redirectUrl, ticket));
-    	}
-    	
-    	message.setOutboundProperty("http.status", "302");
-    	message.setOutboundProperty("Location", redirectUrl);
-    }
-
-    /**
-     * After the user authenticates the ticket obtained with the get-ticket processor,
-     * there're two ways to get the required auth token:
-     * 
-     * <ol>
-	 *	<li>
-	 *		You can configure box.net to make a callback returning the ticket and authToken, in which case you need to set the
-	 * 		usesCallback and callbackPath config attributes accordingly 
-	 *	</li>
-	 *	<li>
-	 *		You can use this processor to obtain the authentication token explicitly.
-	 *  </li>
-	 *	</ol>
-	 *
-	 *  Either way, this connector will retain the authToken in memory and will use it in all operations.
-	 *  
-	 *  For more info look at http://developers.box.net/w/page/12923915/ApiAuthentication
-     *
-     * {@sample.xml ../../../doc/box-connector.xml.sample box:auth-token}
-     *
-     * @param message the current mule message
-     * @param ticket the ticket to authenticate against.
-     * @return an instance of {@link org.mule.modules.box.model.response.GetAuthTokenResponse} with information about the current user
-     * @throws IllegalArgumentException if the ticket does not match a logged user
-     */
-    @Processor
-    @Inject
-    public GetAuthTokenResponse authToken(MuleMessage message, String ticket) {
-    	
-
-    	GetAuthTokenResponse response = this.authResource
-							    			.queryParam("action", "get_auth_token")
-							    			.queryParam("api_key", this.apiKey)
-							    			.queryParam("ticket", ticket)
-								    		.accept(MediaType.APPLICATION_XML)
-								    		.get(GetAuthTokenResponse.class); 
-    	
-    	if (response.isNotLoggedIn()) {
-    		String msg = "Failed to obtain authToken using ticket " + ticket + ". Not logged in";
-       	 	logger.error(msg);
-       	 	throw new IllegalStateException(msg);
-    	}
-    	
-    	if (response.isValid()) {
-    		String authToken = response.getAuthToken();
-    		
-    		if (logger.isDebugEnabled()) {
-    			logger.debug(String.format("ticket %s mapped to authToken: %s", ticket, authToken));
-    		}
-    		
-    		this.saveAuthToken(message, ticket, authToken);
-    		return response;
-    		
-    	} else {
-    		throw new RuntimeException(String.format("Status %s was obtained while fetching access token", response.getStatus()));
-    	}
-    }
-
     /**
      * Retrieves information about a given folder. If the folderId parameter is not
      * provided or equals 0, then the root folder will be returned.
@@ -488,6 +234,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Folder}
      */
     @Processor
+	@OAuthProtected
     public Folder getFolder(@Optional @Default("0") String folderId) {
     	return this.jerseyUtil.get(this.apiResource.path("folders").path(folderId), Folder.class, 200);
     }
@@ -502,6 +249,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Folder} representing the newly created folder
      */
     @Processor
+	@OAuthProtected
     public Folder createFolder(@Optional @Default("0") String parentId, String folderName) {
     	return this.jerseyUtil.post(this.apiResource.path("folders")
     							.entity(new CreateFolderRequest(folderName, parentId)),
@@ -523,6 +271,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Folder} that represents the updated folder
      */
     @Processor
+	@OAuthProtected
     public Folder updateFolder(@Optional @Default("#[payload]") UpdateItemRequest request, String folderId, @Optional String etag) {
     	WebResource resource = this.apiResource.path("folders").path(folderId);
     	return this.jerseyUtil.put(this.maybeAddIfMacth(resource, etag), Folder.class, 200, 201);
@@ -537,6 +286,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Entries}
      */
     @Processor
+	@OAuthProtected
     public Entries getFolderDiscussions(String folderId) {
     	return this.jerseyUtil.get(this.apiResource.path("folders").path(folderId).path("discussions"), Entries.class, 200, 204);
     }
@@ -552,6 +302,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.GetItemsResponse}
      */
     @Processor
+	@OAuthProtected
     public GetItemsResponse getTrashedItems(@Optional @Default("100") Long limit, @Optional @Default("0") Long offset) {
     	return this.getFolderItems("trash", limit, offset);
     }
@@ -568,6 +319,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Folder} with the restored folder new state
      */
     @Processor
+	@OAuthProtected
     public Folder restoreTrashedFolder(String folderId, @Optional @Default("#[payload]") RestoreTrashedItemRequest request) {
     	return this.jerseyUtil.post(this.apiResource
 	    								.path("folders")
@@ -585,6 +337,7 @@ public class BoxConnector implements MuleContextAware {
      * @param folderId the id of the folder to be permanently deleted
      */
     @Processor
+	@OAuthProtected
     public void permDeleteFolder(String folderId) {
     	this.jerseyUtil.delete(this.apiResource.path("folders").path(folderId).path("trash"), String.class, 204);
     }
@@ -598,6 +351,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Folder}
      */
     @Processor
+	@OAuthProtected
     public Folder getTrashedFolder(String folderId) {
     	return this.jerseyUtil.get(this.apiResource.path("folders").path(folderId).path("trash"), Folder.class, 200);
     }
@@ -612,6 +366,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Folder} representing the shared folder
      */
     @Processor
+	@OAuthProtected
     public Folder shareFolder(String folderId, @Optional @Default("#[payload]") SharedLink sharedLink) {
     	CreateSharedLinkRequest request = new CreateSharedLinkRequest();
     	request.setSharedLink(sharedLink);
@@ -632,6 +387,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Folder} representing the unshared folder
      */
     @Processor
+	@OAuthProtected
     public Folder unshareFolder(String folderId) {
     	return this.shareFolder(folderId, null);
     }
@@ -646,6 +402,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Folder} representing the copy
      */
     @Processor
+	@OAuthProtected
     public Folder copyFolder(@Optional @Default("0") String targetFolderId, String folderId) {
     	Item parent = new Item();
     	parent.setId(targetFolderId);
@@ -672,6 +429,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.GetItemsResponse}
      */
     @Processor
+	@OAuthProtected
     public GetItemsResponse getFolderItems(
     					@Optional @Default("0") String folderId,
     					@Optional @Default("100") Long limit,
@@ -702,6 +460,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Item} with that about the found item. {@code null} if the item is not found
      */
     @Processor
+	@OAuthProtected
     public Item getFolderItem(@Optional @Default("0") String folderId, String resourceName) {
     	GetItemsResponse items = this.getFolderItems(folderId, null, null);
     	
@@ -723,6 +482,7 @@ public class BoxConnector implements MuleContextAware {
      * @param recursive Whether to delete this folder if it has items inside of it
      */
     @Processor
+	@OAuthProtected
     public void deleteFolder(String folderId, @Optional @Default("true") Boolean recursive) {
     	this.jerseyUtil.delete(
     			this.apiResource
@@ -751,6 +511,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.File} with the information of the created file
      */
     @Processor
+	@OAuthProtected
     public File uploadStream(
     		@Optional @Default("0") String folderId,
     		String filename,
@@ -797,6 +558,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.File} with the information of the updated file
      */
     @Processor
+	@OAuthProtected
     public File uploadNewVersionStream(
     				@Optional @Default("#[payload]") InputStream content,
     				String fileId,
@@ -834,6 +596,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.File} with the information of the updated file
      */
     @Processor
+	@OAuthProtected
     public File uploadNewVersionPath(
     		String path, 
     		String fileId,
@@ -854,6 +617,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an input stream with the contents of the file
      */
     @Processor
+	@OAuthProtected
     public InputStream download(String fileId, @Optional String version) {
     	WebResource resource = this.apiResource.path("files").path(fileId).path("content");
     	
@@ -873,6 +637,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.File}
      */
     @Processor
+	@OAuthProtected
     public File getFileMetadata(String fileId) {
     	return this.jerseyUtil.get(this.apiResource.path("files").path(fileId), File.class, 200);
     }
@@ -887,6 +652,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.response.FileVersionResponse} with the metadata about the versions
      */
     @Processor
+	@OAuthProtected
     public FileVersionResponse getVersionsMetadata(String fileId) {
     	return this.jerseyUtil.get(this.apiResource.path("files").path(fileId).path("versions"), FileVersionResponse.class, 200, 201);
     }
@@ -907,6 +673,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.File} with the information of the created file
      */
     @Processor
+	@OAuthProtected
     public File uploadPath(
     		String path, 
     		@Optional @Default("0") String folderId,
@@ -933,6 +700,7 @@ public class BoxConnector implements MuleContextAware {
      * @param etag if provided, it will be used to verify that no newer version of the file is available at box
      */
     @Processor
+	@OAuthProtected
     public void deleteFile(String fileId, @Optional String etag) {
     	WebResource resource = this.apiResource.path("files").path(fileId);
     	this.jerseyUtil.delete(this.maybeAddIfMacth(resource, etag), String.class, 200, 204);
@@ -952,6 +720,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.File} with the updated state of the file
      */
     @Processor
+	@OAuthProtected
     public File updateFile(String fileId, @Optional @Default("#[payload]") UpdateItemRequest request, @Optional String etag) {
     	WebResource resource = this.apiResource.path("files").path(fileId);
     	return this.jerseyUtil.put(this.maybeAddIfMacth(resource, etag), File.class, 200, 201);
@@ -967,6 +736,7 @@ public class BoxConnector implements MuleContextAware {
      * @return and instance of {@link org.mule.modules.box.model.File} representing the copy of the file
      */
     @Processor
+	@OAuthProtected
     public File copyFile(@Optional @Default("0") String targetFolderId, String fileId) {
     	Item parent = new Item();
     	parent.setId(targetFolderId);
@@ -991,6 +761,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.File} representing the shared folder
      */
     @Processor
+	@OAuthProtected
     public File shareFile(String fileId, @Optional @Default("#[payload]") SharedLink sharedLink) {
     	CreateSharedLinkRequest request = new CreateSharedLinkRequest();
     	request.setSharedLink(sharedLink);
@@ -1011,6 +782,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.File} representing the unshared folder
      */
     @Processor
+	@OAuthProtected
     public File unshareFile(String fileId) {
     	return this.shareFile(fileId, null);
     }
@@ -1024,6 +796,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.response.GetCommentsResponse}
      */
     @Processor
+	@OAuthProtected
     public GetCommentsResponse getFileComments(String fileId) {
     	return this.jerseyUtil.get(this.apiResource.path("files").path("comments"), GetCommentsResponse.class, 200);
     }
@@ -1041,6 +814,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an InputStream with the content of the thumb. Remember to close it!
      */
     @Processor
+	@OAuthProtected
     public InputStream getFileThumbnail(String fileId, @Optional ThumbnailSize minSize, @Optional ThumbnailSize maxSize) {
     	WebResource resource = this.apiResource.path("files").path(fileId).path("thumbnail.extension");
     	
@@ -1064,6 +838,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.File}
      */
     @Processor
+	@OAuthProtected
     public File getTrashedFile(String fileId) {
     	return this.jerseyUtil.get(this.apiResource.path("files").path(fileId).path("trash"), File.class, 200);
     }
@@ -1080,6 +855,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Folder} with the restored folder new state
      */
     @Processor
+	@OAuthProtected
     public File restoreTrashedFile(String fileId, @Optional @Default("#[payload]") RestoreTrashedItemRequest request) {
     	return this.jerseyUtil.post(this.apiResource
 	    								.path("files")
@@ -1097,6 +873,7 @@ public class BoxConnector implements MuleContextAware {
      * @param fileId the id of the file to be permanently deleted
      */
     @Processor
+	@OAuthProtected
     public void permDeleteFile(String fileId) {
     	this.jerseyUtil.delete(this.apiResource.path("files").path(fileId).path("trash"), String.class, 204);
     }
@@ -1110,6 +887,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Comment} representing the message
      */
     @Processor
+	@OAuthProtected
     public Comment getComment(String commentId) {
     	return this.jerseyUtil.get(this.apiResource.path("comments").path(commentId), Comment.class, 200);
     }
@@ -1124,6 +902,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Comment} representing the created message
      */
     @Processor
+	@OAuthProtected
     public Comment commentFile(String fileId, String message) {
     	Map<String, String> entity = new HashMap<String, String>();
     	entity.put("message", message);
@@ -1146,6 +925,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Comment} representing the updated message
      */
     @Processor
+	@OAuthProtected
     public Comment updateComment(String commentId, String newMessage) {
     	Map<String, String> entity = new HashMap<String, String>();
     	entity.put("message", newMessage);
@@ -1165,6 +945,7 @@ public class BoxConnector implements MuleContextAware {
      * @param commentId the id of the comment to be deleted
      */
     @Processor
+	@OAuthProtected
     public void deleteComment(String commentId) {
     	this.jerseyUtil.delete(this.apiResource.path("comments").path(commentId), Comment.class, 200, 204);
     }
@@ -1179,6 +960,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Discussion} with the metadata of the created discussion
      */
     @Processor
+	@OAuthProtected
     public Discussion createDiscussion(@Optional @Default("#[payload]") Discussion discussion) {
     	return this.jerseyUtil.post(this.apiResource
     									.path("discussions")
@@ -1196,6 +978,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Comment} representing the created message
      */
     @Processor
+	@OAuthProtected
     public Comment commentDiscussion(String discussionId, String message) {
     	Map<String, String> entity = new HashMap<String, String>();
     	entity.put("message", message);
@@ -1218,6 +1001,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Discussion} with the discussion metadata
      */
     @Processor
+	@OAuthProtected
     public Discussion getDiscussion(String discussionId) {
     	return this.jerseyUtil.get(this.apiResource.path("discussions").path(discussionId), Discussion.class, 200);
     }
@@ -1232,6 +1016,7 @@ public class BoxConnector implements MuleContextAware {
      * @return a new instance of {@link org.mule.modules.box.model.Discussion} carrying the updated state
      */
     @Processor
+	@OAuthProtected
     public Discussion updateDiscussion(@Optional @Default("#[payload]") Discussion discussion, String discussionId) {
     	return this.jerseyUtil.put(this.apiResource.path("discussions")
     							.path(discussionId)
@@ -1248,6 +1033,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.response.GetCommentsResponse}
      */
     @Processor
+	@OAuthProtected
     public GetCommentsResponse getDiscussionComments(String discussionId) {
     	return this.jerseyUtil.get(this.apiResource
     										.path("discussions")
@@ -1270,6 +1056,7 @@ public class BoxConnector implements MuleContextAware {
      * @return a new instance of {@link org.mule.modules.box.model.Collaboration} with the state of the newly created collab
      */
     @Processor
+	@OAuthProtected
     public Collaboration createCollaboration(@Optional @Default("#[payload]") Collaboration collaboration) {
     	return this.jerseyUtil.post(this.apiResource
     							.path("collaborations")
@@ -1287,6 +1074,7 @@ public class BoxConnector implements MuleContextAware {
      * @return a new instance of {@link org.mule.modules.box.model.Collaboration} with the state of the collab
      */
     @Processor
+	@OAuthProtected
     public Collaboration updateCollaboration(@Optional @Default("#[payload]") Collaboration collaboration, String collaborationId) {
     	return this.jerseyUtil.put(this.apiResource
 								.path("collaborations")
@@ -1303,6 +1091,7 @@ public class BoxConnector implements MuleContextAware {
      * @param collaborationId the id of the collaboration to be deleted
      */
     @Processor
+	@OAuthProtected
     public void deleteCollaboration(String collaborationId) {
     	this.jerseyUtil.delete(this.apiResource
     									.path("collaborations")
@@ -1319,6 +1108,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Collaboration}
      */
     @Processor
+	@OAuthProtected
     public Collaboration getCollaboration(String collaborationId) {
     	return this.jerseyUtil.get(this.apiResource
     									.path("collaborations")
@@ -1334,6 +1124,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.response.GetCollaborationsResponse}
      */
     @Processor
+	@OAuthProtected
     public GetCollaborationsResponse getPendingCollaborations() {
     	return this.jerseyUtil.get(this.apiResource
     									.path("collaborations")
@@ -1350,6 +1141,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.User}
      */
     @Processor
+	@OAuthProtected
     public User getUser() {
     	return this.jerseyUtil.get(this.apiResource.path("users/me"), User.class, 200);
     }
@@ -1365,6 +1157,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.response.GetUsersResponse}
      */
     @Processor
+	@OAuthProtected
     public GetUsersResponse getUsers(@Optional String filterTerm, @Optional Long limit, @Optional Long offset) {
     	WebResource resource = this.apiResource.path("users");
     	
@@ -1397,6 +1190,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.User} with the updated user state
      */
     @Processor
+	@OAuthProtected
     public User updateUser(
     			String userId,
     			@Optional @Default("#[payload]") User user,
@@ -1419,6 +1213,7 @@ public class BoxConnector implements MuleContextAware {
      * @return a new instance of {@link org.mule.modules.box.model.User} with the final state of the created object
      */
     @Processor
+	@OAuthProtected
     public User createUser(@Optional @Default("#[payload]") User user) {
     	return this.jerseyUtil.post(this.apiResource.path("users").entity(user), User.class, 200, 201);
     }
@@ -1436,6 +1231,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.Folder} representing the moved folder 
      */
     @Processor
+	@OAuthProtected
     public Folder moveFolderToUser(
     			@Optional @Default("#[paylaod]") User targetUser,
     			@Optional @Default("0") String folderId,
@@ -1466,6 +1262,7 @@ public class BoxConnector implements MuleContextAware {
      * @param force Whether or not the user should be deleted even if this user still own files.
      */
     @Processor
+	@OAuthProtected
     public void deleteUser(
     			String userId,
     			@Optional @Default("true") Boolean notify,
@@ -1490,6 +1287,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.EmailAlias}
      */
     @Processor
+	@OAuthProtected
     public EmailAlias createEmailAlias(String userId, String email) {
     	Map<String, String> entity = new HashMap<String, String>();
     	entity.put("email", email);
@@ -1510,6 +1308,7 @@ public class BoxConnector implements MuleContextAware {
      * @param emailAliasId the id of the alias being deleted
      */
     @Processor
+	@OAuthProtected
     public void deleteEmailAlias(String userId, String emailAliasId) {
     	this.jerseyUtil.delete(this.apiResource
     				.path("users")
@@ -1529,6 +1328,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.User} with the modified state
      */
     @Processor
+	@OAuthProtected
     public User changePrimaryLogin(String userId, String login) {
     	Map<String, String> entity = new HashMap<String, String>();
     	entity.put("login", login);
@@ -1550,6 +1350,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.response.GetEmailAliasResponse}
      */
     @Processor
+	@OAuthProtected
     public GetEmailAliasResponse getEmailAliases(String userId) {
     	return this.jerseyUtil.get(this.apiResource
     								.path("users")
@@ -1572,6 +1373,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.response.GetEventsResponse}
      */
     @Processor
+	@OAuthProtected
     public GetEventsResponse getEvents(Long streamPosition, @Optional @Default("all") StreamType streamType, @Optional @Default("100") Long limit) {
     	return this.jerseyUtil.get(this.apiResource
     				.path("events")
@@ -1595,6 +1397,7 @@ public class BoxConnector implements MuleContextAware {
      * @return an instance of {@link org.mule.modules.box.model.response.GetEventsResponse}
      */
     @Processor
+	@OAuthProtected
     public GetEventsResponse getEnterpriseEvents(
     		@Optional String createdAfter,
     		@Optional String createdBefore,
@@ -1636,63 +1439,64 @@ public class BoxConnector implements MuleContextAware {
     	return this.jerseyUtil.get(resource, GetEventsResponse.class, 200);
     }
     
-    
-//    /**
-//     * Retrieves events for all users in an enterprise.
-//     * Upper and lower bounds as well as filters can be applied to the results.
-//     * 
-//     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-events}
-//     * 
-//     */
-//    @Processor
-//    public void subscribe() {
-//    	LongPollingServerResponse response = this.jerseyUtil.options(this.apiResource.path("events"), LongPollingServerResponse.class, 200);
-//    	
-//    	if (CollectionUtils.isEmpty(response.getEntries())) {
-//    		throw new BoxException("Box did not returned a long polling server back");
-//    	}
-//    	
-//    	LongPollingServer server = response.getEntries().get(0);
-//    	String channel = server.getChannel();
-//    	String host = server.getHost();
-//    	
-//    	System.out.println(channel);
-//    	System.out.println(host);
-//    	
-//    }
-    
-    
-    
+    /**
+     * Subscribes to the events long polling server and will generate a new mule message
+     * each time an event arrives
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:listen-events}
+     * 
+     * @param callback callback to be invoked when a message arribes
+     * @return an instance of  {@link org.mule.api.callback.StopSourceCallback} that unsubscribes the long polling server when the app is stopped. 
+     */
+    @Source(primaryNodeOnly = true, threadingModel = SourceThreadingModel.NONE)
+    @OAuthProtected
+    public synchronized StopSourceCallback listenEvents(final SourceCallback callback) {
+    	if (this.accessToken == null) {
+        	pendingSubscriptions.add(callback);
+        } else {
+        	this.subscribe(callback);
+        }
+        
+        return new StopSourceCallback() {
+        	
+        	@Override
+        	public void stop() throws Exception {
+        		getLongPollingClient().unsubscribe();
+        	}
+        };
+    }
 
-    public String getAuthToken(MuleMessage message) {
-    	String token = null;
+    /**
+     * Requests access to a long polling server that
+     * notifies about events in real time.
+     * 
+     *  This is just a request for connection details. A subscription to such topic is not made
+     * 
+     * {@sample.xml ../../../doc/box-connector.xml.sample box:get-events-long-polling-server}
+     * @return an instance of {@link org.mule.modules.box.model.LongPollingServer}
+     */
+    @Processor
+	@OAuthProtected
+    public LongPollingServer getEventsLongPollingServer() {
+    	LongPollingServerResponse response = this.jerseyUtil.options(this.apiResource.path("events"), LongPollingServerResponse.class, 200);
     	
-    	if (this.restoreTokenFlow == null) {
-    	
-    		token = this.authToken;
-    	
-    	} else {
-    		MuleMessage restoreMessage = FlowUtils.callFlow(this.restoreTokenFlow, new DefaultMuleMessage(message)); 
-    		Object payload = restoreMessage.getPayload();
-    		
-    		if (payload instanceof String) {
-    			token = (String) payload;
-    			return token;
-    		} else {
-    			throw new IllegalArgumentException(
-    					String.format("A String payload was expected after invoking restore token flow '%s', but %s was found instead",
-    							this.restoreAuthTokenFlow,
-    							payload == null ? "null" : payload.getClass().getCanonicalName()
-    							)
-    					);
-    		}
+    	if (CollectionUtils.isEmpty(response.getEntries())) {
+    		throw new BoxException("Box did not returned a long polling server back");
     	}
     	
-    	if (StringUtils.isBlank(token)) {
-    		throw new IllegalStateException("Auth token not obtained yet");
+    	return response.getEntries().get(0);
+    }
+    
+	private void subscribe(final SourceCallback callback) {
+		this.getLongPollingClient().subscribe(callback);
+	}
+    
+    private synchronized LongPollingClient getLongPollingClient() {
+    	if (this.longPollingClient == null) {
+    		this.longPollingClient = new LongPollingClient(this, this.getEventsLongPollingServer());
     	}
     	
-    	return token;
+    	return this.longPollingClient;
     }
     
     private WebResource.Builder maybeAddIfMacth(WebResource resource, String etag) {
@@ -1719,59 +1523,6 @@ public class BoxConnector implements MuleContextAware {
 		}
     }
     
-    
-    private Flow fetchFlow(String flowname) {
-    	if (StringUtils.isBlank(flowname)) {
-    		return null;
-    	}
-    	
-    	Flow flow = FlowUtils.getFlow(flowname, muleContext);
-    	
-    	if (flow == null) {
-    		throw new IllegalArgumentException(String.format("flow %s doesn't exists", flowname));
-    	}
-    	
-    	return flow;
-    }
-    
-    public MuleMessage saveAuthToken(MuleMessage message, String ticket, String authToken) {
-	   
-	   if (StringUtils.isBlank(ticket)) {
-		   throw new IllegalArgumentException("auth process did not return a ticket");
-	   }
-	   
-	   if (StringUtils.isBlank(authToken)) {
-		   throw new IllegalArgumentException("auth process did not return an auth token");
-	   }
-	   
-	   MuleMessage copy = new DefaultMuleMessage(message);
-	   copy.setInvocationProperty(BOX_AUTH_TICKET, ticket);
-	   copy.setInvocationProperty(BOX_AUTH_TOKEN, authToken);
-	   
-	   if (this.saveTokenFlow == null) {
-			this.authToken = authToken;
-	   } else {
-			FlowUtils.callFlow(this.saveTokenFlow, copy);
-	   }
-	   
-	   this.postAuth(copy);
-	   
-	   return copy;
-    }
-   
-   private void postAuth(MuleMessage message) {
-	   if (this.postAuthorizationFlow != null) {
-		   if (logger.isDebugEnabled()) {
-			   logger.debug(String.format("invoking post authorization flow %s with message %s", this.postAuthFlow, message.toString()));
-		   }
-		   FlowUtils.callFlow(this.postAuthorizationFlow, message);
-	   } else {
-		   if (logger.isDebugEnabled()) {
-			   logger.debug("No post auth flow specified");
-		   }
-	   }
-   }
-   
    private String hash(InputStream content) {
    	byte[] bytes = null;
 		try {
@@ -1791,89 +1542,12 @@ public class BoxConnector implements MuleContextAware {
 		}
    }
    
-	public String getCallbackPath() {
-		return callbackPath;
-	}
-
-	public void setCallbackPath(String callbackPath) {
-		this.callbackPath = callbackPath;
-	}
-
-	public void setApiKey(String apiKey) {
-		this.apiKey = apiKey;
-	}
-	
-	public Integer getCallbackPort() {
-		return callbackPort;
-	}
-
-	public void setCallbackPort(Integer callbackPort) {
-		this.callbackPort = callbackPort;
-	}
-	
-	public boolean isUsesCallback() {
-		return usesCallback;
-	}
-
-	public void setUsesCallback(boolean usesCallback) {
-		this.usesCallback = usesCallback;
-	}
-
-	@Override
-	public void setMuleContext(MuleContext context) {
-		this.muleContext = context;
-	}
-
-	public String getRestoreAuthTokenFlow() {
-		return restoreAuthTokenFlow;
-	}
-
-	public void setRestoreAuthTokenFlow(String restoreAuthTokenFlow) {
-		this.restoreAuthTokenFlow = restoreAuthTokenFlow;
-	}
-
-	public String getSaveAuthTokenFlow() {
-		return saveAuthTokenFlow;
-	}
-
-	public void setSaveAuthTokenFlow(String saveAuthTokenFlow) {
-		this.saveAuthTokenFlow = saveAuthTokenFlow;
-	}
-
-	public String getApiKey() {
-		return apiKey;
-	}
-
-	public org.mule.api.transport.Connector getHttpConnector() {
-		return httpConnector;
-	}
-
-	public void setHttpConnector(org.mule.api.transport.Connector httpConnector) {
-		this.httpConnector = httpConnector;
-	}
-
-	public String getPostAuthFlow() {
-		return postAuthFlow;
-	}
-
-	public void setPostAuthFlow(String postAuthFlow) {
-		this.postAuthFlow = postAuthFlow;
-	}
-
 	public String getBaseUrl() {
 		return baseUrl;
 	}
 
 	public void setBaseUrl(String baseUrl) {
 		this.baseUrl = baseUrl;
-	}
-
-	public String getAuthUrl() {
-		return authUrl;
-	}
-
-	public void setAuthUrl(String authUrl) {
-		this.authUrl = authUrl;
 	}
 
 	public String getUploadUrl() {
@@ -1883,4 +1557,45 @@ public class BoxConnector implements MuleContextAware {
 	public void setUploadUrl(String uploadUrl) {
 		this.uploadUrl = uploadUrl;
 	}
+
+	public String getClientId() {
+		return clientId;
+	}
+
+	public void setClientId(String clientId) {
+		this.clientId = clientId;
+	}
+
+	public String getClientSecret() {
+		return clientSecret;
+	}
+
+	public void setClientSecret(String clientSecret) {
+		this.clientSecret = clientSecret;
+	}
+
+	public String getAccessToken() {
+		return accessToken;
+	}
+
+	public void setAccessToken(String accessToken) {
+		this.accessToken = accessToken;
+	}
+
+	public int getLongPollingTimeout() {
+		return longPollingTimeout;
+	}
+
+	public void setLongPollingTimeout(int longPollingTimeout) {
+		this.longPollingTimeout = longPollingTimeout;
+	}
+
+	public int getLongPollingHandshakeTimeout() {
+		return longPollingHandshakeTimeout;
+	}
+
+	public void setLongPollingHandshakeTimeout(int longPollingHandshakeTimeout) {
+		this.longPollingHandshakeTimeout = longPollingHandshakeTimeout;
+	}
+	
 }

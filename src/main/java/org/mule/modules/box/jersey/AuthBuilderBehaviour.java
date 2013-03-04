@@ -8,7 +8,6 @@
 
 package org.mule.modules.box.jersey;
 
-import org.mule.RequestContext;
 import org.mule.commons.jersey.RequestBehaviour;
 import org.mule.modules.box.BoxConnector;
 
@@ -19,7 +18,6 @@ import com.sun.jersey.api.client.WebResource.Builder;
  * @author mariano.gonzalez@mulesoft.com
  *
  */
-@SuppressWarnings("deprecation")
 public class AuthBuilderBehaviour implements RequestBehaviour {
 
 	private BoxConnector connector;
@@ -30,10 +28,6 @@ public class AuthBuilderBehaviour implements RequestBehaviour {
 	
 	@Override
 	public <T> Builder behave(Builder builder, String method, Class<T> entityClass) {
-		return builder.header("Authorization", String.format("BoxAuth api_key=%s&auth_token=%s",
-													this.connector.getApiKey(),
-													this.connector.getAuthToken(RequestContext.getEvent().getMessage())));
+		return builder.header("Authorization", "Bearer " + this.connector.getAccessToken());
 	}
-	
-
 }

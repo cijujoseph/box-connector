@@ -214,3 +214,9 @@
 <!-- BEGIN_INCLUDE(box:get-events) -->
     <box:get-events streamPosition="0" />
 <!-- END_INCLUDE(box:get-events) -->
+<!-- BEGIN_INCLUDE(box:listen-events) -->
+    <box:listen-events />
+<!-- END_INCLUDE(box:listen-events) -->
+<!-- BEGIN_INCLUDE(box:get-events-long-polling-server) -->
+    <box:get-events-long-polling-server />
+<!-- END_INCLUDE(box:get-events-long-polling-server) -->

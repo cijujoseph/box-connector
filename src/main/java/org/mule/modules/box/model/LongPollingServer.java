@@ -30,7 +30,6 @@ public class LongPollingServer implements Serializable {
 	private static final String CHANNEL_REGEXP = ".*channel=(.*)&.*";
 	private static final Pattern CHANNEL_PATTERN = Pattern.compile(CHANNEL_REGEXP);
 
-	
 	private static final String HOST_REGEXP = "(.*)/subscribe?.*";
 	private static final Pattern HOST_PATTERN = Pattern.compile(HOST_REGEXP);
 	
@@ -41,12 +40,21 @@ public class LongPollingServer implements Serializable {
 	private Integer maxRetries;
 	private Integer retryTimeout;
 	
+	private transient String channel;
+	private transient String host;
+	
 	public String getChannel() {
-		return this.get(this.url, CHANNEL_PATTERN);
+		if (this.channel == null) {
+			this.channel = this.get(this.url, CHANNEL_PATTERN); 
+		}
+		return this.channel;
 	}
 	
 	public String getHost() {
-		return this.get(this.url, HOST_PATTERN);
+		if (this.host == null) {
+			this.host = this.get(this.url, HOST_PATTERN); 
+		}
+		return  this.host;
 	}
 	
 	private String get(String value, Pattern pattern) {
