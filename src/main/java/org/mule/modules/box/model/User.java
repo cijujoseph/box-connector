@@ -8,9 +8,6 @@
 
 package org.mule.modules.box.model;
 
-import java.util.List;
-import java.util.Map;
-
 import javax.xml.bind.annotation.XmlElement;
 
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
@@ -79,11 +76,6 @@ public class User extends Entity {
 	 * The maximum individual file size in bytes this user can have
 	 */
 	private Long maxUploadSize;
-	
-	/**
-	 * An array of key/value pairs set by the user’s admin
-	 */
-	private List<Map<String, String>> trackingCodes;
 	
 	/**
 	 * Whether this user can see other enterprise users in its contact list
@@ -198,15 +190,6 @@ public class User extends Entity {
 
 	public void setLanguage(String language) {
 		this.language = language;
-	}
-
-	@XmlElement(name="tracking_codes")
-	public List<Map<String, String>> getTrackingCodes() {
-		return trackingCodes;
-	}
-
-	public void setTrackingCodes(List<Map<String, String>> trackingCodes) {
-		this.trackingCodes = trackingCodes;
 	}
 
 	@XmlElement(name="can_see_managed_users")

@@ -48,6 +48,7 @@ import org.mule.commons.jersey.JerseyUtil;
 import org.mule.modules.box.exception.BoxException;
 import org.mule.modules.box.jersey.AuthBuilderBehaviour;
 import org.mule.modules.box.jersey.BoxResponseHandler;
+import org.mule.modules.box.jersey.GzipBehaviour;
 import org.mule.modules.box.jersey.MediaTypesBuilderBehaviour;
 import org.mule.modules.box.lp.LongPollingClient;
 import org.mule.modules.box.model.Collaboration;
@@ -158,6 +159,14 @@ public class BoxConnector {
     @Default("30000")
     private int longPollingHandshakeTimeout;
     
+    /**
+     * If set to true, Box will be asked to gzip all its responses
+     */
+    @Configurable
+    @Optional
+    @Default("false")
+    private boolean useGzip;
+    
     private LongPollingClient longPollingClient = null;
     
     /**
@@ -201,11 +210,16 @@ public class BoxConnector {
     }
     
     private void initJerseyUtil() {
-    	this.jerseyUtil = JerseyUtil.builder()
-    						.addRequestBehaviour(MediaTypesBuilderBehaviour.INSTANCE)
-    						.addRequestBehaviour(new AuthBuilderBehaviour(this))
-    						.setResponseHandler(BoxResponseHandler.INSTANCE)
-    						.build();
+    	JerseyUtil.Builder builder = JerseyUtil.builder()
+											.addRequestBehaviour(MediaTypesBuilderBehaviour.INSTANCE)
+											.addRequestBehaviour(new AuthBuilderBehaviour(this))
+									    	.setResponseHandler(BoxResponseHandler.INSTANCE);
+    	
+    	if (this.useGzip) {
+    		builder.addRequestBehaviour(GzipBehaviour.INSTANCE);
+    	}
+    	
+    	this.jerseyUtil = builder.build();
     }
     
     @OAuthAccessTokenIdentifier
