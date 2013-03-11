@@ -162,10 +162,10 @@ public class BoxConnector {
     /**
      * If set to true, Box will be asked to gzip all its responses
      */
-    @Configurable
-    @Optional
-    @Default("false")
-    private boolean useGzip;
+//    @Configurable
+//    @Optional
+//    @Default("false")
+    private boolean useGzip = false;
     
     private LongPollingClient longPollingClient = null;
     
@@ -1463,7 +1463,6 @@ public class BoxConnector {
      * @return an instance of  {@link org.mule.api.callback.StopSourceCallback} that unsubscribes the long polling server when the app is stopped. 
      */
     @Source(primaryNodeOnly = true, threadingModel = SourceThreadingModel.NONE)
-    @OAuthProtected
     public synchronized StopSourceCallback listenEvents(final SourceCallback callback) {
     	if (this.accessToken == null) {
         	pendingSubscriptions.add(callback);
@@ -1475,7 +1474,9 @@ public class BoxConnector {
         	
         	@Override
         	public void stop() throws Exception {
-        		getLongPollingClient().unsubscribe();
+        		if (longPollingClient != null) {
+        			longPollingClient.unsubscribe();
+        		}
         	}
         };
     }
@@ -1502,12 +1503,18 @@ public class BoxConnector {
     }
     
 	private void subscribe(final SourceCallback callback) {
-		this.getLongPollingClient().subscribe(callback);
+		LongPollingServer server = this.getEventsLongPollingServer();
+		WebResource pollingResource = this.client.resource(server.getHost())
+												.path("subscribe")
+												.queryParam("channel", server.getChannel())
+												.queryParam("stream_type", "all");
+		
+		this.getLongPollingClient(pollingResource).subscribe(callback);
 	}
     
-    private synchronized LongPollingClient getLongPollingClient() {
+    private synchronized LongPollingClient getLongPollingClient(WebResource pollingResource) {
     	if (this.longPollingClient == null) {
-    		this.longPollingClient = new LongPollingClient(this, this.getEventsLongPollingServer());
+    		this.longPollingClient = new LongPollingClient(pollingResource, this.jerseyUtil);
     	}
     	
     	return this.longPollingClient;
@@ -1611,5 +1618,12 @@ public class BoxConnector {
 	public void setLongPollingHandshakeTimeout(int longPollingHandshakeTimeout) {
 		this.longPollingHandshakeTimeout = longPollingHandshakeTimeout;
 	}
-	
+
+	public boolean isUseGzip() {
+		return useGzip;
+	}
+
+	public void setUseGzip(boolean useGzip) {
+		this.useGzip = useGzip;
+	}
 }

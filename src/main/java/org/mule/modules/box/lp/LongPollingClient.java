@@ -8,92 +8,53 @@
 
 package org.mule.modules.box.lp;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.apache.log4j.Logger;
-import org.cometd.bayeux.Channel;
-import org.cometd.bayeux.ChannelId;
-import org.cometd.bayeux.Message;
-import org.cometd.bayeux.client.ClientSessionChannel;
-import org.cometd.bayeux.client.ClientSessionChannel.MessageListener;
-import org.cometd.client.BayeuxClient;
-import org.cometd.client.transport.ClientTransport;
 import org.mule.api.callback.SourceCallback;
-import org.mule.modules.box.BoxConnector;
-import org.mule.modules.box.exception.BoxException;
-import org.mule.modules.box.model.LongPollingServer;
+import org.mule.commons.jersey.JerseyUtil;
+
+import com.sun.jersey.api.client.ClientResponse.Status;
+import com.sun.jersey.api.client.WebResource;
 
 /**
  * 
  * @author mariano.gonzalez@mulesoft.com
  *
  */
-public class LongPollingClient extends BayeuxClient {
+public class LongPollingClient {
 	
 	private static final Logger logger = Logger.getLogger(LongPollingClient.class);
 	
-	private BoxConnector connector;
-	private LongPollingServer server = null;
-	private MessageListener messageListener = null;
+	private JerseyUtil jerseyUtil;
+	private WebResource pollingResource;
+	private boolean subscribed = true;
 	
-	private static Map<String, Object> options(BoxConnector connector) {
-		Map<String, Object> options = new HashMap<String, Object>();
-		options.put(ClientTransport.TIMEOUT_OPTION, connector.getLongPollingTimeout());
-		
-		return Collections.unmodifiableMap(options);
-	}
-	
-	public LongPollingClient(BoxConnector connector, LongPollingServer server) {
-		super(server.getUrl(), BoxLongPollingTransport.create(connector, options(connector), server.getChannel()));
-		this.connector = connector;
-		this.server = server;
+	public LongPollingClient(WebResource pollingResource, JerseyUtil jerseyUtil) {
+		this.pollingResource = pollingResource;
+		this.jerseyUtil = jerseyUtil;
 	}
 	
 	
 	public synchronized void subscribe(final SourceCallback callback) {
-		try {
+		Runnable listener = new Runnable() {
 			
-			this.messageListener = new MessageListener() {
-				
-				@Override
-				public void onMessage(ClientSessionChannel channel, Message message) {
+			@Override
+			public void run() {
+				while (subscribed) {
 					try {
-						callback.process();
-					} catch (Exception e) {
-						logger.error(e);
+						String json = jerseyUtil.get(pollingResource, String.class, Status.OK.getStatusCode(), Status.NO_CONTENT.getStatusCode(), Status.GATEWAY_TIMEOUT.getStatusCode(), Status.REQUEST_TIMEOUT.getStatusCode());
+						System.out.println(json);
+					} catch (Throwable t) {
+						logger.error(String.format("Found exception while long-polling on resource %s: %s", pollingResource, t.getMessage()));
 					}
 				}
-			};
-			
-			getChannel(Channel.META_CONNECT).addListener(new ClientSessionChannel.MessageListener() {
-	            public void onMessage(ClientSessionChannel channel, Message message) {
-	                message.isSuccessful();
-                }
-            });
-			this.getChannel("/*").subscribe(this.messageListener);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+			}
+		};
+		
+		new Thread(listener, "Box Long Polling thread for endpont " + this.pollingResource).start();
 	}
 	
 	public synchronized void unsubscribe() {
-		if (this.isConnected() && this.messageListener != null) {
-			this.getChannel(this.server.getChannel()).unsubscribe(this.messageListener);
-		}
+		this.subscribed = false;
 	}
 	
-	@Override
-	protected ChannelId newChannelId(String channelId) {
-		return super.newChannelId(channelId);
-	}
-	
-	@Override
-	public void handshake() {
-		super.handshake(this.connector.getLongPollingHandshakeTimeout());
-		if (!this.isHandshook()) {
-			throw new BoxException(String.format("Failed to handshake against server %s after %d ms", server.getHost(), this.connector.getLongPollingHandshakeTimeout()));
-		}
-	}
 }

@@ -32,10 +32,9 @@ public class LongPollingTest {
 		
 		
 		
-		LongPollingClient client = new LongPollingClient(connector, server);
-		client.subscribe(null);
-		
-		Thread.sleep(1000*60*10);
+//		LongPollingClient client = new LongPollingClient(connector, server);
+//		client.subscribe(null);
+//		
 	}
 	
 }
