@@ -1507,7 +1507,8 @@ public class BoxConnector {
 		WebResource pollingResource = this.client.resource(server.getHost())
 												.path("subscribe")
 												.queryParam("channel", server.getChannel())
-												.queryParam("stream_type", "all");
+												.queryParam("stream_type", "all")
+												.queryParam("stream_position", "0");
 		
 		this.getLongPollingClient(pollingResource).subscribe(callback);
 	}

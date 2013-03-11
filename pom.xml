@@ -29,6 +29,12 @@
 
 	<dependencies>
 		<dependency>
+			<groupId>com.mulesoft.commons</groupId>
+			<artifactId>connector-commons</artifactId>
+			<version>0.1-SNAPSHOT</version>
+		</dependency>
+	
+		<dependency>
 			<groupId>com.sun.jersey</groupId>
 			<artifactId>jersey-client</artifactId>
 			<version>${jersey.version}</version>
@@ -48,21 +54,12 @@
 			<artifactId>jersey-multipart</artifactId>
 			<version>${jersey.version}</version>
 		</dependency>
-		
-		<dependency>
-            <groupId>org.cometd.java</groupId>
-            <artifactId>cometd-java-client</artifactId>
-            <version>2.2.0</version>
-        </dependency>
-
 		<dependency>
 			<groupId>org.mule.transports</groupId>
 			<artifactId>mule-transport-http</artifactId>
 			<version>${mule.version}</version>
 			<scope>test</scope>
 		</dependency>
-
-
 	</dependencies>
 
 	<repositories>
